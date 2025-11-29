@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(timeout 5 node:*)",
+      "Bash(curl:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(del srcservicesstatusEmitter.js)",
+      "Bash(node index.js:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
