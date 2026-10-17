@@ -6,6 +6,7 @@ const { closeDatabase } = require('./database/connection');
 const messagesController = require('./controllers/messagesController');
 const { createAuthMiddleware } = require('./middleware/auth.middleware');
 const { metaError } = require('./utils/metaError');
+const { registerDocs } = require('./plugins/docs');
 
 // Register event listeners (auto-registers on require)
 require('./events/listeners/sentListener');
@@ -36,6 +37,9 @@ function createServer() {
     credentials: true
   });
 
+  // API reference at /docs (development only, before routes)
+  registerDocs(app, config);
+
   // Routes
   app.register(require('./routes/health'));
   app.register(require('./routes/messages.routes'), {
@@ -44,7 +48,7 @@ function createServer() {
   });
 
   // Root endpoint
-  app.get('/', async (request, reply) => {
+  app.get('/', { schema: { hide: true } }, async (request, reply) => {
     return {
       name: 'Fake Meta Cloud API',
       version: '1.0.0',
@@ -55,10 +59,17 @@ function createServer() {
         messages: 'POST /v26.0/:wabaId/messages',
         stats: 'GET /v26.0/:wabaId/messages/stats',
         webhook_events: 'GET /v26.0/:wabaId/webhooks/events',
-        simulate_inbound: 'POST /v26.0/:wabaId/simulate/inbound'
+        simulate_inbound: 'POST /v26.0/:wabaId/simulate/inbound',
+        docs: 'GET /docs (development)'
       },
       documentation: 'See README.md for usage examples'
     };
+  });
+
+  // Unknown routes answer like Graph API (HTTP 400, code 2500)
+  app.setNotFoundHandler((request, reply) => {
+    const path = request.url.split('?')[0];
+    reply.status(400).send(metaError(2500, `Unknown path components: ${path}`));
   });
 
   // Error handler

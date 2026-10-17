@@ -29,7 +29,10 @@
     "pino": "^10.4.0",
     "pino-pretty": "^13.2.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@fastify/swagger": "^9.9.2",
+    "@scalar/fastify-api-reference": "^1.75.0"
+  },
   "engines": {
     "node": ">=22.0.0"
   },

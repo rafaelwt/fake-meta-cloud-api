@@ -1,5 +1,8 @@
 const { metaError } = require('../utils/metaError');
 
+// Graph API subcode for an expired, revoked or invalid access token
+const INVALID_TOKEN_SUBCODE = 467;
+
 /**
  * Authentication middleware for Bearer token validation
  * Validates Authorization header against configured access token
@@ -28,7 +31,8 @@ function createAuthMiddleware(config) {
     if (!authHeader.startsWith('Bearer ')) {
       return reply.status(401).send(metaError(
         190,
-        'Invalid OAuth access token - Cannot parse access token'
+        'Invalid OAuth access token - Cannot parse access token',
+        { error_subcode: INVALID_TOKEN_SUBCODE }
       ));
     }
 
@@ -39,7 +43,8 @@ function createAuthMiddleware(config) {
     if (token !== expectedToken) {
       return reply.status(401).send(metaError(
         190,
-        'Invalid OAuth access token - Cannot parse access token'
+        'Invalid OAuth access token - Cannot parse access token',
+        { error_subcode: INVALID_TOKEN_SUBCODE }
       ));
     }
 

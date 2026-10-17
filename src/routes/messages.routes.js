@@ -16,6 +16,17 @@ const messagesBodySchema = {
 // Accept any Graph API version prefix (e.g. v19.0, v26.0), like the real API
 const VERSION = ':version(^v\\d+\\.\\d+$)';
 
+const versionedParams = {
+  type: 'object',
+  properties: {
+    version: { type: 'string', examples: ['v26.0'] },
+    wabaId: { type: 'string', examples: ['123456789012345'] }
+  },
+  required: ['version', 'wabaId']
+};
+
+const security = [{ bearerAuth: [] }];
+
 /**
  * Messages Routes
  * Defines HTTP endpoints and connects to controller handlers
@@ -29,15 +40,11 @@ async function messagesRoutes(fastify, options) {
    */
   fastify.post(`/${VERSION}/:wabaId/messages`, {
     schema: {
+      tags: ['Messages'],
+      summary: 'Send a message or mark one as read',
+      security,
       body: messagesBodySchema,
-      params: {
-        type: 'object',
-        properties: {
-          version: { type: 'string' },
-          wabaId: { type: 'string' }
-        },
-        required: ['version', 'wabaId']
-      }
+      params: versionedParams
     },
     onRequest: auth
   }, handlers.sendMessage);
@@ -47,6 +54,12 @@ async function messagesRoutes(fastify, options) {
    * Get message statistics (debugging)
    */
   fastify.get(`/${VERSION}/:wabaId/messages/stats`, {
+    schema: {
+      tags: ['Debug'],
+      summary: 'Message statistics',
+      security,
+      params: versionedParams
+    },
     onRequest: auth
   }, handlers.getStats);
 
@@ -55,6 +68,18 @@ async function messagesRoutes(fastify, options) {
    * Get webhook events (debugging)
    */
   fastify.get(`/${VERSION}/:wabaId/webhooks/events`, {
+    schema: {
+      tags: ['Debug'],
+      summary: 'Webhook delivery log',
+      security,
+      params: versionedParams,
+      querystring: {
+        type: 'object',
+        properties: {
+          messageId: { type: 'string', description: 'Only events for this wamid' }
+        }
+      }
+    },
     onRequest: auth
   }, handlers.getWebhookEvents);
 
@@ -64,6 +89,10 @@ async function messagesRoutes(fastify, options) {
    */
   fastify.post(`/${VERSION}/:wabaId/simulate/inbound`, {
     schema: {
+      tags: ['Simulation'],
+      summary: 'Simulate a user message (opens the 24h window)',
+      security,
+      params: versionedParams,
       body: inboundRequestSchema
     },
     onRequest: auth

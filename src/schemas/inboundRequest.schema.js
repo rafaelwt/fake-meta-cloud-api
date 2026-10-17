@@ -6,6 +6,7 @@
 const inboundRequestSchema = {
   type: 'object',
   required: ['from', 'text'],
+  examples: [{ from: '+59179021784', name: 'Ana', text: { body: 'Hola!' } }],
   properties: {
     from: {
       type: 'string',

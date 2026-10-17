@@ -13,6 +13,7 @@ Mock implementation of WhatsApp Business Cloud API for testing and development. 
 - **Strict Validation**: JSON Schema validation matching Meta's API spec
 - **Fastify + Pino**: High-performance server with structured logging
 - **Versioned API**: any `/vNN.0/` prefix is accepted (docs use `v26.0`)
+- **API Reference**: interactive docs at `/docs` (Scalar + OpenAPI 3.1) in development
 - **Signed Webhooks**: `X-Hub-Signature-256` header, verifiable with your app secret
 - **Inbound Messages**: simulate users writing to the business (`messages[]` webhook)
 - **Service Window**: optional 24h customer service window enforcement (error 131047)
@@ -118,6 +119,17 @@ pnpm start
 # Development mode (with auto-reload)
 pnpm dev
 ```
+
+### API Reference
+
+In development (`NODE_ENV=development`, the default) the server exposes an
+interactive reference built from the route schemas:
+
+- `http://localhost:3000/docs/`: Scalar UI, with a named example per message type and a request runner
+- `http://localhost:3000/docs/openapi.json`: OpenAPI 3.1 document (also `/docs/openapi.yaml`)
+
+Force it on or off with `DOCS_ENABLED=true|false`. The docs packages are
+`devDependencies` and are only loaded when docs are enabled.
 
 ### API Endpoints
 
@@ -350,12 +362,13 @@ Errors use Meta's Graph API format:
 }
 ```
 
-| Case | HTTP | `code` |
-|------|------|--------|
-| Missing token | 401 | `2500` |
-| Invalid token | 401 | `190` |
-| Invalid body / unknown `message_id` | 400 | `100` |
-| Unexpected server error | 500 | `1` |
+| Case | HTTP | `code` | `error_subcode` |
+|------|------|--------|-----------------|
+| Missing token | 401 | `2500` | — |
+| Invalid token | 401 | `190` | `467` |
+| Invalid body / unknown `message_id` | 400 | `100` | — (details in `error_data`) |
+| Unknown path | 400 | `2500` | — |
+| Unexpected server error | 500 | `1` | — |
 
 ### Webhook Signature
 
@@ -548,7 +561,8 @@ fake-meta-cloud-api/
 ## API Versions
 
 Routes accept any `vNN.N` prefix (`/v19.0/...`, `/v26.0/...`), so clients can
-keep their configured Graph API version. Unknown prefixes return 404.
+keep their configured Graph API version. Unknown prefixes or paths return
+`400` with code `2500` (`Unknown path components`), like Graph API.
 
 ## Development
 
