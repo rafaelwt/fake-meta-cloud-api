@@ -1,4 +1,5 @@
 const messageRequestSchema = require('../schemas/messageRequest.schema');
+const inboundRequestSchema = require('../schemas/inboundRequest.schema');
 
 // Accept any Graph API version prefix (e.g. v19.0, v26.0), like the real API
 const VERSION = ':version(^v\\d+\\.\\d+$)';
@@ -44,6 +45,17 @@ async function messagesRoutes(fastify, options) {
   fastify.get(`/${VERSION}/:wabaId/webhooks/events`, {
     onRequest: auth
   }, handlers.getWebhookEvents);
+
+  /**
+   * POST /:version/:wabaId/simulate/inbound
+   * Simulate a user message to the business (fake-only, opens the service window)
+   */
+  fastify.post(`/${VERSION}/:wabaId/simulate/inbound`, {
+    schema: {
+      body: inboundRequestSchema
+    },
+    onRequest: auth
+  }, handlers.simulateInbound);
 }
 
 module.exports = messagesRoutes;

@@ -1,5 +1,6 @@
 const IdGenerator = require('../utils/idGenerator');
 const messageService = require('../services/messageService');
+const inboundService = require('../services/inboundService');
 
 /**
  * Send a WhatsApp message
@@ -14,6 +15,21 @@ async function sendMessage(request, reply) {
   const response = messageService.processMessage(message, messageId, wabaId);
 
   request.log.info({ messageId, recipient: message.to, type: message.type }, 'Message accepted');
+
+  return response;
+}
+
+/**
+ * Simulate an inbound user message (fake-only)
+ */
+async function simulateInbound(request, reply) {
+  const { wabaId } = request.params;
+  const inbound = request.body;
+
+  const messageId = IdGenerator.generateWamid();
+  const response = inboundService.processInbound(inbound, messageId, wabaId);
+
+  request.log.info({ messageId, from: inbound.from }, 'Inbound message simulated');
 
   return response;
 }
@@ -42,6 +58,7 @@ async function getWebhookEvents(request, reply) {
 
 module.exports = {
   sendMessage,
+  simulateInbound,
   getStats,
   getWebhookEvents
 };

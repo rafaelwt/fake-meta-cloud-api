@@ -50,7 +50,8 @@ function createServer() {
         ready: '/ready',
         messages: 'POST /v26.0/:wabaId/messages',
         stats: 'GET /v26.0/:wabaId/messages/stats',
-        webhook_events: 'GET /v26.0/:wabaId/webhooks/events'
+        webhook_events: 'GET /v26.0/:wabaId/webhooks/events',
+        simulate_inbound: 'POST /v26.0/:wabaId/simulate/inbound'
       },
       documentation: 'See README.md for usage examples'
     };

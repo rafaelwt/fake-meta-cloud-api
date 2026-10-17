@@ -9,10 +9,12 @@ const { signPayload } = require('../utils/signature');
  * @param {string} url - Webhook URL
  * @param {object} payload - Webhook payload
  * @param {string} messageId - Message ID (for logging)
- * @param {string} eventType - Event type (sent, delivered, read, failed)
+ * @param {string} eventType - Event type (sent, delivered, read, failed, message)
+ * @param {object} [options]
+ * @param {boolean} [options.logEvent=true] - Persist to webhook_events (outbound messages only)
  * @returns {Promise<object>} - Response data
  */
-async function sendWebhook(url, payload, messageId, eventType) {
+async function sendWebhook(url, payload, messageId, eventType, { logEvent = true } = {}) {
   const startTime = Date.now();
 
   try {
@@ -46,7 +48,7 @@ async function sendWebhook(url, payload, messageId, eventType) {
     }, 'Webhook sent successfully');
 
     // Log to database
-    webhookEventModel.log({
+    if (logEvent) webhookEventModel.log({
       message_id: messageId,
       event_type: eventType,
       webhook_url: url,
@@ -75,7 +77,7 @@ async function sendWebhook(url, payload, messageId, eventType) {
     }, 'Webhook delivery failed');
 
     // Log failure to database
-    webhookEventModel.log({
+    if (logEvent) webhookEventModel.log({
       message_id: messageId,
       event_type: eventType,
       webhook_url: url,

@@ -28,6 +28,7 @@ async function start() {
 ║  - Messages: POST /v26.0/:wabaId/messages                  ║
 ║  - Stats:    GET  /v26.0/:wabaId/messages/stats            ║
 ║  - Events:   GET  /v26.0/:wabaId/webhooks/events           ║
+║  - Inbound:  POST /v26.0/:wabaId/simulate/inbound          ║
 ║                                                            ║
 ╚════════════════════════════════════════════════════════════╝
     `);
