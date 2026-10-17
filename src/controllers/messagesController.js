@@ -1,6 +1,7 @@
 const IdGenerator = require('../utils/idGenerator');
 const messageService = require('../services/messageService');
 const inboundService = require('../services/inboundService');
+const { metaError } = require('../utils/metaError');
 
 /**
  * Send a WhatsApp message
@@ -30,17 +31,12 @@ async function markAsRead(request, reply) {
   const { message_id: messageId, typing_indicator: typingIndicator } = request.body;
 
   if (!inboundService.markAsRead(messageId)) {
-    return reply.status(400).send({
-      error: {
-        message: '(#100) Invalid parameter',
-        type: 'OAuthException',
-        code: 100,
-        error_data: {
-          messaging_product: 'whatsapp',
-          details: `Message ${messageId} not found`
-        }
+    return reply.status(400).send(metaError(100, '(#100) Invalid parameter', {
+      error_data: {
+        messaging_product: 'whatsapp',
+        details: `Message ${messageId} not found`
       }
-    });
+    }));
   }
 
   request.log.info({ messageId, typing: Boolean(typingIndicator) }, 'Inbound message marked as read');

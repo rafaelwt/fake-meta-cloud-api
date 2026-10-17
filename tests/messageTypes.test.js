@@ -89,7 +89,7 @@ test('missing type reports the type, not template', async () => {
   const res = await send({ messaging_product: 'whatsapp', to: '+5491100000000' });
 
   assert.equal(res.statusCode, 400);
-  const details = JSON.stringify(res.json().error.details);
+  const details = res.json().error.error_data.details;
   assert.match(details, /type/);
   assert.doesNotMatch(details, /template/);
 });

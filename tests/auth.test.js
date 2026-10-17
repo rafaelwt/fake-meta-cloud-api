@@ -25,7 +25,7 @@ test('missing token returns 401 even with an invalid body', async () => {
   const res = await app.inject({ method: 'POST', url: '/v26.0/123/messages', payload: invalidBody });
 
   assert.equal(res.statusCode, 401);
-  assert.equal(res.json().error.message, 'Missing Authorization header');
+  assert.equal(res.json().error.code, 2500);
 });
 
 test('wrong token returns 401 even with an invalid body', async () => {
@@ -37,7 +37,7 @@ test('wrong token returns 401 even with an invalid body', async () => {
   });
 
   assert.equal(res.statusCode, 401);
-  assert.equal(res.json().error.message, 'Invalid access token');
+  assert.equal(res.json().error.code, 190);
 });
 
 test('valid token with invalid body still returns 400', async () => {
