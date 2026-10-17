@@ -1,7 +1,28 @@
-const { messageModel } = require('../database/models');
+const { messageModel, inboundMessageModel } = require('../database/models');
 const { startMessageFlow } = require('../events/emitter');
 const { shouldTriggerError } = require('../utils/errorPatterns');
 const config = require('../config');
+
+const SERVICE_WINDOW_SECONDS = 24 * 60 * 60;
+const RE_ENGAGEMENT_ERROR = 131047;
+
+/**
+ * Check if a free-form message falls outside the customer service window
+ * Templates can always be sent; enforcement is opt-in via config
+ * @param {object} message - Message from request
+ * @param {string} recipientId - Recipient phone number without +
+ * @returns {boolean} - True if the message must fail with 131047
+ */
+function isServiceWindowBlocked(message, recipientId) {
+  if (!config.behavior.serviceWindowEnforced || message.type === 'template') {
+    return false;
+  }
+
+  const lastReceivedAt = inboundMessageModel.getLastReceivedAt(recipientId);
+  const now = Math.floor(Date.now() / 1000);
+
+  return !lastReceivedAt || now - lastReceivedAt > SERVICE_WINDOW_SECONDS;
+}
 
 /**
  * Process a new message and start the status flow
@@ -14,7 +35,8 @@ function processMessage(message, messageId, wabaId) {
   const recipientId = message.to.replace('+', '');
 
   // Check if should trigger error
-  const errorCode = shouldTriggerError(message.to, config.errors.patterns);
+  const errorCode = shouldTriggerError(message.to, config.errors.patterns)
+    ?? (isServiceWindowBlocked(message, recipientId) ? RE_ENGAGEMENT_ERROR : null);
 
   // Save to database
   messageModel.insert({
@@ -77,6 +99,7 @@ function getRecentWebhookEvents(limit = 50) {
 }
 
 module.exports = {
+  isServiceWindowBlocked,
   processMessage,
   getMessageStats,
   getWebhookEventsByMessage,

@@ -1,16 +1,20 @@
 const axios = require('axios');
 const { webhookEventModel } = require('../database/models');
 const logger = require('../logger');
+const config = require('../config');
+const { signPayload } = require('../utils/signature');
 
 /**
  * Send webhook to external URL
  * @param {string} url - Webhook URL
  * @param {object} payload - Webhook payload
  * @param {string} messageId - Message ID (for logging)
- * @param {string} eventType - Event type (sent, delivered, read, failed)
+ * @param {string} eventType - Event type (sent, delivered, read, failed, message)
+ * @param {object} [options]
+ * @param {boolean} [options.logEvent=true] - Persist to webhook_events (outbound messages only)
  * @returns {Promise<object>} - Response data
  */
-async function sendWebhook(url, payload, messageId, eventType) {
+async function sendWebhook(url, payload, messageId, eventType, { logEvent = true } = {}) {
   const startTime = Date.now();
 
   try {
@@ -20,10 +24,14 @@ async function sendWebhook(url, payload, messageId, eventType) {
       eventType
     }, 'Sending webhook');
 
-    const response = await axios.post(url, payload, {
+    // Serialize once so the signature matches the exact bytes sent
+    const rawBody = JSON.stringify(payload);
+
+    const response = await axios.post(url, rawBody, {
       headers: {
         'Content-Type': 'application/json',
-        'User-Agent': 'WhatsApp-Fake-Cloud-API/1.0'
+        'User-Agent': 'WhatsApp-Fake-Cloud-API/1.0',
+        'X-Hub-Signature-256': signPayload(rawBody, config.meta.appSecret)
       },
       timeout: 10000, // 10 second timeout
       validateStatus: (status) => status >= 200 && status < 500 // Don't throw on 4xx
@@ -40,7 +48,7 @@ async function sendWebhook(url, payload, messageId, eventType) {
     }, 'Webhook sent successfully');
 
     // Log to database
-    webhookEventModel.log({
+    if (logEvent) webhookEventModel.log({
       message_id: messageId,
       event_type: eventType,
       webhook_url: url,
@@ -69,7 +77,7 @@ async function sendWebhook(url, payload, messageId, eventType) {
     }, 'Webhook delivery failed');
 
     // Log failure to database
-    webhookEventModel.log({
+    if (logEvent) webhookEventModel.log({
       message_id: messageId,
       event_type: eventType,
       webhook_url: url,

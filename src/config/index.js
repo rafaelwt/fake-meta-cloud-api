@@ -21,7 +21,8 @@ const config = {
   meta: {
     wabaId: process.env.WABA_ID || '123456789012345',
     phoneNumberId: process.env.PHONE_NUMBER_ID || '987654321098765',
-    displayPhoneNumber: process.env.DISPLAY_PHONE_NUMBER || '+1234567890'
+    displayPhoneNumber: process.env.DISPLAY_PHONE_NUMBER || '+1234567890',
+    appSecret: process.env.APP_SECRET || 'your_fake_app_secret_here'
   },
 
   // Webhook
@@ -53,7 +54,9 @@ const config = {
 
   // Behavior
   behavior: {
-    readProbability: parseFloat(process.env.READ_PROBABILITY || '0.7')
+    readProbability: parseFloat(process.env.READ_PROBABILITY || '0.7'),
+    // Reject free-form messages outside the 24h customer service window (131047)
+    serviceWindowEnforced: process.env.SERVICE_WINDOW_ENFORCED === 'true'
   },
 
   // Error simulation

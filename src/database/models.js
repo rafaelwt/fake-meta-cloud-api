@@ -1,6 +1,7 @@
 const { initDatabase } = require('./connection');
 const MessageModel = require('./messageModel');
 const WebhookEventModel = require('./webhookEventModel');
+const InboundMessageModel = require('./inboundMessageModel');
 const config = require('../config');
 const logger = require('../logger');
 
@@ -16,9 +17,11 @@ const db = initDatabase(config.database.path, logger);
 // Create model instances
 const messageModel = new MessageModel(db);
 const webhookEventModel = new WebhookEventModel(db);
+const inboundMessageModel = new InboundMessageModel(db);
 
 module.exports = {
   db,
   messageModel,
-  webhookEventModel
+  webhookEventModel,
+  inboundMessageModel
 };

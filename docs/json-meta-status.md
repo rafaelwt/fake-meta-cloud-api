@@ -4,6 +4,14 @@ Los webhooks de status te permiten saber el estado de los mensajes enviados (si 
 
 ---
 
+#### Headers
+
+Cada webhook incluye `X-Hub-Signature-256: sha256=<hmac>`, donde `<hmac>` es el
+HMAC-SHA256 del body crudo usando el app secret (`APP_SECRET`). Validarlo sobre
+el body sin parsear antes de procesar el evento.
+
+---
+
 #### Status: SENT (Enviado)
 El mensaje fue enviado exitosamente desde tu cuenta de WhatsApp Business.
 

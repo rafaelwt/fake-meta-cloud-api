@@ -4,7 +4,8 @@ Mock implementation of WhatsApp Business Cloud API for testing and development. 
 
 ## Features
 
-- **Full Message Support**: Template, text, image, document, audio, and video messages
+- **Full Message Support**: template, text, image, document, audio, video, sticker, interactive, reaction, location and contacts messages, plus replies (`context`)
+- **Mark as Read**: mark inbound messages as read, with optional typing indicator
 - **Async Webhooks**: EventEmitter-based webhook delivery (sent → delivered → read/failed)
 - **Realistic Timing**: Configurable delays to simulate real Meta API behavior
 - **SQLite Persistence**: Message and webhook event history
@@ -12,6 +13,9 @@ Mock implementation of WhatsApp Business Cloud API for testing and development. 
 - **Strict Validation**: JSON Schema validation matching Meta's API spec
 - **Fastify + Pino**: High-performance server with structured logging
 - **Versioned API**: any `/vNN.0/` prefix is accepted (docs use `v26.0`)
+- **Signed Webhooks**: `X-Hub-Signature-256` header, verifiable with your app secret
+- **Inbound Messages**: simulate users writing to the business (`messages[]` webhook)
+- **Service Window**: optional 24h customer service window enforcement (error 131047)
 
 ## Architecture
 
@@ -69,6 +73,9 @@ WEBHOOK_URL=http://localhost:4000/webhook
 # Authentication
 API_ACCESS_TOKEN=your_fake_bearer_token_here
 
+# App secret used to sign webhooks (X-Hub-Signature-256)
+APP_SECRET=your_fake_app_secret_here
+
 # WhatsApp Business Account IDs
 WABA_ID=123456789012345
 PHONE_NUMBER_ID=987654321098765
@@ -84,6 +91,7 @@ DELAY_READ_MAX=10000
 
 # Behavior
 READ_PROBABILITY=0.7  # 70% chance of read status
+SERVICE_WINDOW_ENFORCED=false  # true: free-form messages need an inbound message in the last 24h
 
 # Error Patterns (phone:error_code)
 ERROR_PATTERNS=+99999:131026,+88888:131047,+77777:131031
@@ -224,6 +232,147 @@ curl -X GET "http://localhost:3000/v26.0/123456789012345/webhooks/events?message
   -H "Authorization: Bearer your_fake_bearer_token_here"
 ```
 
+#### 7. Other Message Types
+
+Same endpoint and auth as above; only the body changes:
+
+```jsonc
+// Interactive (button, list, cta_url, flow, product, product_list, ...)
+{ "messaging_product": "whatsapp", "to": "+59179021784", "type": "interactive",
+  "interactive": { "type": "button", "body": { "text": "Confirm?" },
+    "action": { "buttons": [{ "type": "reply", "reply": { "id": "yes", "title": "Yes" } }] } } }
+
+// Reaction (empty emoji removes it)
+{ "messaging_product": "whatsapp", "to": "+59179021784", "type": "reaction",
+  "reaction": { "message_id": "wamid.ABC", "emoji": "👍" } }
+
+// Location
+{ "messaging_product": "whatsapp", "to": "+59179021784", "type": "location",
+  "location": { "latitude": -16.5, "longitude": -68.15, "name": "La Paz" } }
+
+// Sticker (id or link)
+{ "messaging_product": "whatsapp", "to": "+59179021784", "type": "sticker",
+  "sticker": { "id": "1234567890" } }
+
+// Contacts
+{ "messaging_product": "whatsapp", "to": "+59179021784", "type": "contacts",
+  "contacts": [{ "name": { "formatted_name": "Ana Pérez" }, "phones": [{ "phone": "+59170000000" }] }] }
+
+// Reply to a message: add "context" to any message
+{ "messaging_product": "whatsapp", "to": "+59179021784", "type": "text",
+  "text": { "body": "Sure!" }, "context": { "message_id": "wamid.ABC" } }
+```
+
+#### 8. Mark as Read / Typing Indicator
+
+Marks an inbound message (see Simulate Inbound below) as read. Add
+`typing_indicator` to also show "typing…" to the user. Responds
+`{ "success": true }`; an unknown `message_id` returns `400` with error code `100`.
+
+```bash
+curl -X POST http://localhost:3000/v26.0/123456789012345/messages \
+  -H "Authorization: Bearer your_fake_bearer_token_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messaging_product": "whatsapp",
+    "status": "read",
+    "message_id": "wamid.HBgLNTkxNzkwMjE3ODQVAgARGBI...",
+    "typing_indicator": { "type": "text" }
+  }'
+```
+
+#### 9. Simulate Inbound Message (fake-only)
+
+Simulates a user writing to the business. Your webhook receives a signed
+`messages[]` payload like Meta's, and the user's 24h service window opens.
+
+```bash
+curl -X POST http://localhost:3000/v26.0/123456789012345/simulate/inbound \
+  -H "Authorization: Bearer your_fake_bearer_token_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "+59179021784",
+    "name": "Ana",
+    "text": { "body": "Hola!" }
+  }'
+```
+
+Webhook payload:
+
+```json
+{
+  "object": "whatsapp_business_account",
+  "entry": [{
+    "id": "123456789012345",
+    "changes": [{
+      "value": {
+        "messaging_product": "whatsapp",
+        "metadata": {
+          "display_phone_number": "+1234567890",
+          "phone_number_id": "987654321098765"
+        },
+        "contacts": [{ "profile": { "name": "Ana" }, "wa_id": "59179021784" }],
+        "messages": [{
+          "from": "59179021784",
+          "id": "wamid.HBgLNTkxNzkwMjE3ODQVAgARGBI...",
+          "timestamp": "1748718740",
+          "type": "text",
+          "text": { "body": "Hola!" }
+        }]
+      },
+      "field": "messages"
+    }]
+  }]
+}
+```
+
+### Customer Service Window
+
+With `SERVICE_WINDOW_ENFORCED=true`, free-form (non-template) messages are only
+delivered if the recipient sent an inbound message in the last 24 hours. Otherwise
+the request is still `accepted`, and the status flow ends with a `failed` webhook
+carrying error `131047` (Re-engagement message), like Meta. Template messages are
+always allowed. Error patterns take precedence over the window check.
+
+### Error Responses
+
+Errors use Meta's Graph API format:
+
+```json
+{
+  "error": {
+    "message": "(#100) Invalid parameter",
+    "type": "OAuthException",
+    "code": 100,
+    "error_data": { "messaging_product": "whatsapp", "details": "body/text must have required property 'body'" },
+    "fbtrace_id": "Ab3xYz..."
+  }
+}
+```
+
+| Case | HTTP | `code` |
+|------|------|--------|
+| Missing token | 401 | `2500` |
+| Invalid token | 401 | `190` |
+| Invalid body / unknown `message_id` | 400 | `100` |
+| Unexpected server error | 500 | `1` |
+
+### Webhook Signature
+
+Every webhook is signed like Meta does: the `X-Hub-Signature-256` header holds
+`sha256=` followed by the HMAC-SHA256 of the raw request body, keyed with
+`APP_SECRET`. Verify it against the raw body, before parsing JSON:
+
+```js
+const crypto = require('crypto');
+
+function isValidSignature(rawBody, header = '', appSecret) {
+  const expected = Buffer.from('sha256=' + crypto.createHmac('sha256', appSecret).update(rawBody).digest('hex'));
+  const received = Buffer.from(header);
+  return received.length === expected.length && crypto.timingSafeEqual(received, expected);
+}
+```
+
 ### Webhook Payloads
 
 After sending a message, your webhook URL will receive POST requests:
@@ -347,55 +496,59 @@ curl -X POST http://localhost:3000/v26.0/123456789012345/messages \
 ```
 fake-meta-cloud-api/
 ├── src/
-│   ├── api/
-│   │   └── v23/
-│   │       └── messages/
-│   │           └── index.js          # Message endpoints
 │   ├── config/
 │   │   ├── index.js                  # Centralized config
 │   │   └── errorCodes.js             # Meta error codes
+│   ├── controllers/
+│   │   └── messagesController.js     # Route handlers
 │   ├── database/
 │   │   ├── connection.js             # SQLite setup
+│   │   ├── models.js                 # Model instances
 │   │   ├── messageModel.js           # Message CRUD
+│   │   ├── inboundMessageModel.js    # Simulated user messages
 │   │   ├── webhookEventModel.js      # Webhook logs
 │   │   └── schema.sql                # Database schema
+│   ├── events/
+│   │   ├── bus.js                    # EventEmitter bus
+│   │   ├── emitter.js                # Status flow + webhook payloads
+│   │   └── listeners/                # sent/delivered/read/failed handlers
 │   ├── middleware/
-│   │   └── auth.middleware.js        # Bearer token auth
+│   │   └── auth.middleware.js        # Bearer token auth (onRequest)
 │   ├── routes/
-│   │   └── health.js                 # Health check
+│   │   ├── health.js                 # Health check
+│   │   └── messages.routes.js        # Versioned message endpoints
 │   ├── schemas/
-│   │   └── messageRequest.schema.js  # Validation schemas
+│   │   ├── messageRequest.schema.js  # Validation schemas
+│   │   └── inboundRequest.schema.js  # Simulated inbound schema
 │   ├── services/
-│   │   ├── messageService.js         # Message orchestration
-│   │   ├── statusEmitter.js          # EventEmitter (webhooks)
-│   │   └── webhookService.js         # HTTP webhook delivery
+│   │   ├── messageService.js         # Message orchestration + service window
+│   │   ├── inboundService.js         # Simulated inbound messages
+│   │   └── webhookService.js         # Signed HTTP webhook delivery
 │   ├── utils/
 │   │   ├── delays.js                 # Random delay helpers
 │   │   ├── errorPatterns.js          # Pattern matching
-│   │   └── idGenerator.js            # wamid generation
+│   │   ├── idGenerator.js            # wamid generation
+│   │   ├── signature.js              # X-Hub-Signature-256
+│   │   └── templateCategories.js     # Template pricing categories
+│   ├── logger.js                     # Pino logger
 │   └── server.js                     # Fastify app
+├── tests/                            # node:test suites
 ├── docs/
 │   ├── json-meta-status.md           # Webhook examples
-│   └── send-template.md              # Template examples
+│   └── send-teamplate.md             # Template examples
 ├── data/                             # SQLite database (created on run)
 ├── .env                              # Your config (not in git)
 ├── .env.example                      # Config template
 ├── index.js                          # Entry point
 ├── package.json
+├── pnpm-workspace.yaml
 └── README.md
 ```
 
-## Adding New API Versions
+## API Versions
 
-To add v24:
-
-1. Create `src/api/v24/messages/index.js`
-2. Copy from `src/api/v23/messages/index.js`
-3. Modify route path to `/v24.0/:wabaId/messages`
-4. Register in `src/server.js`:
-   ```js
-   app.register(require('./api/v24/messages'), { auth: authMiddleware });
-   ```
+Routes accept any `vNN.N` prefix (`/v19.0/...`, `/v26.0/...`), so clients can
+keep their configured Graph API version. Unknown prefixes return 404.
 
 ## Development
 
@@ -458,6 +611,13 @@ pnpm test:watch
 
 - Verify Bearer token matches `.env` `API_ACCESS_TOKEN`
 - Include `Authorization: Bearer <token>` header
+- Authentication runs before body validation: a missing or wrong token always
+  returns `401` (codes `2500` / `190`), even if the body is invalid
+
+### Webhook signature mismatch
+
+- `APP_SECRET` must match the app secret your webhook handler uses
+- Compute the HMAC over the raw body bytes, not over re-serialized JSON
 
 ## License
 

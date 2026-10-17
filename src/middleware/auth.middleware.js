@@ -1,3 +1,5 @@
+const { metaError } = require('../utils/metaError');
+
 /**
  * Authentication middleware for Bearer token validation
  * Validates Authorization header against configured access token
@@ -16,24 +18,18 @@ function createAuthMiddleware(config) {
 
     // Check if Authorization header exists
     if (!authHeader) {
-      return reply.status(401).send({
-        error: {
-          message: 'Missing Authorization header',
-          type: 'auth_error',
-          code: 401
-        }
-      });
+      return reply.status(401).send(metaError(
+        2500,
+        'An active access token must be used to query information about the current user.'
+      ));
     }
 
     // Check if it's a Bearer token
     if (!authHeader.startsWith('Bearer ')) {
-      return reply.status(401).send({
-        error: {
-          message: 'Invalid Authorization header format. Expected: Bearer <token>',
-          type: 'auth_error',
-          code: 401
-        }
-      });
+      return reply.status(401).send(metaError(
+        190,
+        'Invalid OAuth access token - Cannot parse access token'
+      ));
     }
 
     // Extract token
@@ -41,13 +37,10 @@ function createAuthMiddleware(config) {
 
     // Validate token
     if (token !== expectedToken) {
-      return reply.status(401).send({
-        error: {
-          message: 'Invalid access token',
-          type: 'auth_error',
-          code: 401
-        }
-      });
+      return reply.status(401).send(metaError(
+        190,
+        'Invalid OAuth access token - Cannot parse access token'
+      ));
     }
 
     // Token is valid, continue

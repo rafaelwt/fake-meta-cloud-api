@@ -38,3 +38,17 @@ CREATE TABLE IF NOT EXISTS webhook_events (
 CREATE INDEX IF NOT EXISTS idx_webhook_events_message_id ON webhook_events(message_id);
 CREATE INDEX IF NOT EXISTS idx_webhook_events_sent_at ON webhook_events(sent_at DESC);
 CREATE INDEX IF NOT EXISTS idx_webhook_events_success ON webhook_events(success);
+
+-- Table: inbound_messages
+-- Stores simulated messages sent by users to the business
+CREATE TABLE IF NOT EXISTS inbound_messages (
+    id TEXT PRIMARY KEY,                    -- wamid format ID
+    waba_id TEXT NOT NULL,                  -- WhatsApp Business Account ID
+    from_id TEXT NOT NULL,                  -- Sender phone number without +
+    message_type TEXT NOT NULL,             -- 'text'
+    message_content TEXT,                   -- JSON stringified content
+    received_at INTEGER NOT NULL            -- Unix timestamp
+);
+
+-- Index for service window lookups
+CREATE INDEX IF NOT EXISTS idx_inbound_messages_from ON inbound_messages(from_id, received_at DESC);

@@ -5,6 +5,7 @@ const { db } = require('./database/models');
 const { closeDatabase } = require('./database/connection');
 const messagesController = require('./controllers/messagesController');
 const { createAuthMiddleware } = require('./middleware/auth.middleware');
+const { metaError } = require('./utils/metaError');
 
 // Register event listeners (auto-registers on require)
 require('./events/listeners/sentListener');
@@ -22,6 +23,9 @@ function createServer() {
     disableRequestLogging: false,
     trustProxy: true
   });
+
+  // Database handle for health checks
+  app.decorate('db', db);
 
   // Middleware
   const authMiddleware = createAuthMiddleware(config);
@@ -50,7 +54,8 @@ function createServer() {
         ready: '/ready',
         messages: 'POST /v26.0/:wabaId/messages',
         stats: 'GET /v26.0/:wabaId/messages/stats',
-        webhook_events: 'GET /v26.0/:wabaId/webhooks/events'
+        webhook_events: 'GET /v26.0/:wabaId/webhooks/events',
+        simulate_inbound: 'POST /v26.0/:wabaId/simulate/inbound'
       },
       documentation: 'See README.md for usage examples'
     };
@@ -64,24 +69,20 @@ function createServer() {
     }, 'Request error');
 
     if (error.validation) {
-      return reply.status(400).send({
-        error: {
-          message: 'Validation failed',
-          type: 'validation_error',
-          code: 400,
-          details: error.validation
+      return reply.status(400).send(metaError(100, '(#100) Invalid parameter', {
+        error_data: {
+          messaging_product: 'whatsapp',
+          details: error.message
         }
-      });
+      }));
     }
 
     const statusCode = error.statusCode || 500;
-    reply.status(statusCode).send({
-      error: {
-        message: error.message || 'Internal Server Error',
-        type: error.name || 'error',
-        code: statusCode
-      }
-    });
+    if (statusCode < 500) {
+      return reply.status(statusCode).send(metaError(100, error.message));
+    }
+
+    reply.status(statusCode).send(metaError(1, 'An unknown error has occurred.'));
   });
 
   // Graceful shutdown

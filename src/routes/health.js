@@ -20,7 +20,7 @@ async function healthRoutes(fastify, options) {
         heapTotal: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)}MB`,
         rss: `${Math.round(memoryUsage.rss / 1024 / 1024)}MB`
       },
-      database: fastify.db ? 'connected' : 'disconnected'
+      database: fastify.db?.open ? 'connected' : 'disconnected'
     };
   });
 
