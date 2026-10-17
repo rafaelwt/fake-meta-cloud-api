@@ -13,6 +13,7 @@ Mock implementation of WhatsApp Business Cloud API for testing and development. 
 - **Strict Validation**: JSON Schema validation matching Meta's API spec
 - **Fastify + Pino**: High-performance server with structured logging
 - **Versioned API**: any `/vNN.0/` prefix is accepted (docs use `v26.0`)
+- **API Reference**: interactive docs at `/docs` (Scalar + OpenAPI 3.1) in development
 - **Signed Webhooks**: `X-Hub-Signature-256` header, verifiable with your app secret
 - **Inbound Messages**: simulate users writing to the business (`messages[]` webhook)
 - **Service Window**: optional 24h customer service window enforcement (error 131047)
@@ -118,6 +119,17 @@ pnpm start
 # Development mode (with auto-reload)
 pnpm dev
 ```
+
+### API Reference
+
+In development (`NODE_ENV=development`, the default) the server exposes an
+interactive reference built from the route schemas:
+
+- `http://localhost:3000/docs/`: Scalar UI, with a named example per message type and a request runner
+- `http://localhost:3000/docs/openapi.json`: OpenAPI 3.1 document (also `/docs/openapi.yaml`)
+
+Force it on or off with `DOCS_ENABLED=true|false`. The docs packages are
+`devDependencies` and are only loaded when docs are enabled.
 
 ### API Endpoints
 

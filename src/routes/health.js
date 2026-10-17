@@ -7,7 +7,9 @@ async function healthRoutes(fastify, options) {
   /**
    * Health check endpoint
    */
-  fastify.get('/health', async (request, reply) => {
+  fastify.get('/health', {
+    schema: { tags: ['Health'], summary: 'Liveness and process stats' }
+  }, async (request, reply) => {
     const uptime = process.uptime();
     const memoryUsage = process.memoryUsage();
 
@@ -27,7 +29,9 @@ async function healthRoutes(fastify, options) {
   /**
    * Ready check endpoint
    */
-  fastify.get('/ready', async (request, reply) => {
+  fastify.get('/ready', {
+    schema: { tags: ['Health'], summary: 'Readiness (database open)' }
+  }, async (request, reply) => {
     if (!fastify.db || !fastify.db.open) {
       return reply.status(503).send({
         status: 'not ready',
