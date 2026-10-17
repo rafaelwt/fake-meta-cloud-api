@@ -4,7 +4,8 @@ Mock implementation of WhatsApp Business Cloud API for testing and development. 
 
 ## Features
 
-- **Full Message Support**: Template, text, image, document, audio, and video messages
+- **Full Message Support**: template, text, image, document, audio, video, sticker, interactive, reaction, location and contacts messages, plus replies (`context`)
+- **Mark as Read**: mark inbound messages as read, with optional typing indicator
 - **Async Webhooks**: EventEmitter-based webhook delivery (sent → delivered → read/failed)
 - **Realistic Timing**: Configurable delays to simulate real Meta API behavior
 - **SQLite Persistence**: Message and webhook event history
@@ -231,7 +232,56 @@ curl -X GET "http://localhost:3000/v26.0/123456789012345/webhooks/events?message
   -H "Authorization: Bearer your_fake_bearer_token_here"
 ```
 
-#### 7. Simulate Inbound Message (fake-only)
+#### 7. Other Message Types
+
+Same endpoint and auth as above; only the body changes:
+
+```jsonc
+// Interactive (button, list, cta_url, flow, product, product_list, ...)
+{ "messaging_product": "whatsapp", "to": "+59179021784", "type": "interactive",
+  "interactive": { "type": "button", "body": { "text": "Confirm?" },
+    "action": { "buttons": [{ "type": "reply", "reply": { "id": "yes", "title": "Yes" } }] } } }
+
+// Reaction (empty emoji removes it)
+{ "messaging_product": "whatsapp", "to": "+59179021784", "type": "reaction",
+  "reaction": { "message_id": "wamid.ABC", "emoji": "👍" } }
+
+// Location
+{ "messaging_product": "whatsapp", "to": "+59179021784", "type": "location",
+  "location": { "latitude": -16.5, "longitude": -68.15, "name": "La Paz" } }
+
+// Sticker (id or link)
+{ "messaging_product": "whatsapp", "to": "+59179021784", "type": "sticker",
+  "sticker": { "id": "1234567890" } }
+
+// Contacts
+{ "messaging_product": "whatsapp", "to": "+59179021784", "type": "contacts",
+  "contacts": [{ "name": { "formatted_name": "Ana Pérez" }, "phones": [{ "phone": "+59170000000" }] }] }
+
+// Reply to a message: add "context" to any message
+{ "messaging_product": "whatsapp", "to": "+59179021784", "type": "text",
+  "text": { "body": "Sure!" }, "context": { "message_id": "wamid.ABC" } }
+```
+
+#### 8. Mark as Read / Typing Indicator
+
+Marks an inbound message (see Simulate Inbound below) as read. Add
+`typing_indicator` to also show "typing…" to the user. Responds
+`{ "success": true }`; an unknown `message_id` returns `400` with error code `100`.
+
+```bash
+curl -X POST http://localhost:3000/v26.0/123456789012345/messages \
+  -H "Authorization: Bearer your_fake_bearer_token_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messaging_product": "whatsapp",
+    "status": "read",
+    "message_id": "wamid.HBgLNTkxNzkwMjE3ODQVAgARGBI...",
+    "typing_indicator": { "type": "text" }
+  }'
+```
+
+#### 9. Simulate Inbound Message (fake-only)
 
 Simulates a user writing to the business. Your webhook receives a signed
 `messages[]` payload like Meta's, and the user's 24h service window opens.
