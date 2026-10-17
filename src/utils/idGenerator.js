@@ -23,15 +23,6 @@ class IdGenerator {
   }
 
   /**
-   * Generate a conversation ID
-   * @returns {string} - Conversation ID
-   */
-  static generateConversationId() {
-    const randomData = crypto.randomBytes(16);
-    return randomData.toString('hex');
-  }
-
-  /**
    * Generate a unique ID for any purpose
    * @returns {string} - UUID v4
    */

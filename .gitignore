@@ -7,7 +7,6 @@
 node_modules/
 package-lock.json
 yarn.lock
-pnpm-lock.yaml
 
 # Database
 data/
@@ -48,3 +47,5 @@ temp/
 *.tmp
 
 *.csv
+# Agent tooling
+.atl/

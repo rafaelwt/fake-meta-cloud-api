@@ -25,9 +25,9 @@ async function start() {
 ║  Endpoints:                                                ║
 ║  - Health:   GET  /health                                  ║
 ║  - Ready:    GET  /ready                                   ║
-║  - Messages: POST /v19.0/:wabaId/messages                  ║
-║  - Stats:    GET  /v19.0/:wabaId/messages/stats            ║
-║  - Events:   GET  /v19.0/:wabaId/webhooks/events           ║
+║  - Messages: POST /v26.0/:wabaId/messages                  ║
+║  - Stats:    GET  /v26.0/:wabaId/messages/stats            ║
+║  - Events:   GET  /v26.0/:wabaId/webhooks/events           ║
 ║                                                            ║
 ╚════════════════════════════════════════════════════════════╝
     `);

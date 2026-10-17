@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ quiet: true });
 
 /**
  * Centralized configuration for the fake Meta Cloud API

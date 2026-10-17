@@ -27,16 +27,11 @@ El mensaje fue enviado exitosamente desde tu cuenta de WhatsApp Business.
                 "status": "sent",
                 "timestamp": "1748718745",
                 "recipient_id": "59178085576",
-                "conversation": {
-                  "id": "CONVERSATION_ID",
-                  "origin": {
-                    "type": "business_initiated"
-                  }
-                },
                 "pricing": {
                   "billable": true,
-                  "pricing_model": "CBP",
-                  "category": "business_initiated"
+                  "pricing_model": "PMP",
+                  "type": "regular",
+                  "category": "marketing"
                 }
               }
             ]
@@ -74,17 +69,11 @@ El mensaje fue entregado al dispositivo del destinatario.
                 "status": "delivered",
                 "timestamp": "1748718750",
                 "recipient_id": "59178085576",
-                "conversation": {
-                  "id": "CONVERSATION_ID",
-                  "expiration_timestamp": "1748804145",
-                  "origin": {
-                    "type": "business_initiated"
-                  }
-                },
                 "pricing": {
                   "billable": true,
-                  "pricing_model": "CBP",
-                  "category": "business_initiated"
+                  "pricing_model": "PMP",
+                  "type": "regular",
+                  "category": "marketing"
                 }
               }
             ]
@@ -200,14 +189,12 @@ El mensaje no pudo ser entregado. Incluye información sobre el error.
 - **status**: Estado del mensaje (`sent`, `delivered`, `read`, `failed`)
 - **timestamp**: Marca de tiempo Unix del evento
 - **recipient_id**: Número de WhatsApp del destinatario
-- **conversation**: Información sobre la conversación y ventana de 24 horas
-  - **id**: ID de la conversación
-  - **expiration_timestamp**: Cuándo expira la ventana de conversación
-  - **origin.type**: Tipo de conversación (`user_initiated`, `business_initiated`, `referral_conversion`)
-- **pricing**: Información de facturación
+- **conversation**: Omitido desde v24.0 (solo aparece en conversaciones de free entry point)
+- **pricing**: Información de facturación (solo en `sent` y `delivered`)
   - **billable**: Si el mensaje es facturable
-  - **pricing_model**: Modelo de precios (CBP = Conversation-Based Pricing)
-  - **category**: Categoría de conversación
+  - **pricing_model**: Modelo de precios (`PMP` = Per-Message Pricing; `CBP` solo antes del 1/7/2025)
+  - **type**: `regular`, `free_customer_service` o `free_entry_point`
+  - **category**: `marketing`, `utility`, `authentication`, `authentication-international`, `marketing_lite`, `referral_conversion` o `service`
 - **errors**: Array de errores (solo en status `failed`)
   - **code**: Código de error
   - **title**: Título del error
