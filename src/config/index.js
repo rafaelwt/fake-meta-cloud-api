@@ -21,7 +21,8 @@ const config = {
   meta: {
     wabaId: process.env.WABA_ID || '123456789012345',
     phoneNumberId: process.env.PHONE_NUMBER_ID || '987654321098765',
-    displayPhoneNumber: process.env.DISPLAY_PHONE_NUMBER || '+1234567890'
+    displayPhoneNumber: process.env.DISPLAY_PHONE_NUMBER || '+1234567890',
+    appSecret: process.env.APP_SECRET || 'your_fake_app_secret_here'
   },
 
   // Webhook

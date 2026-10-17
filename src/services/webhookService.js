@@ -1,6 +1,8 @@
 const axios = require('axios');
 const { webhookEventModel } = require('../database/models');
 const logger = require('../logger');
+const config = require('../config');
+const { signPayload } = require('../utils/signature');
 
 /**
  * Send webhook to external URL
@@ -20,10 +22,14 @@ async function sendWebhook(url, payload, messageId, eventType) {
       eventType
     }, 'Sending webhook');
 
-    const response = await axios.post(url, payload, {
+    // Serialize once so the signature matches the exact bytes sent
+    const rawBody = JSON.stringify(payload);
+
+    const response = await axios.post(url, rawBody, {
       headers: {
         'Content-Type': 'application/json',
-        'User-Agent': 'WhatsApp-Fake-Cloud-API/1.0'
+        'User-Agent': 'WhatsApp-Fake-Cloud-API/1.0',
+        'X-Hub-Signature-256': signPayload(rawBody, config.meta.appSecret)
       },
       timeout: 10000, // 10 second timeout
       validateStatus: (status) => status >= 200 && status < 500 // Don't throw on 4xx
