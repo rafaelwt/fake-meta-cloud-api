@@ -334,6 +334,29 @@ the request is still `accepted`, and the status flow ends with a `failed` webhoo
 carrying error `131047` (Re-engagement message), like Meta. Template messages are
 always allowed. Error patterns take precedence over the window check.
 
+### Error Responses
+
+Errors use Meta's Graph API format:
+
+```json
+{
+  "error": {
+    "message": "(#100) Invalid parameter",
+    "type": "OAuthException",
+    "code": 100,
+    "error_data": { "messaging_product": "whatsapp", "details": "body/text must have required property 'body'" },
+    "fbtrace_id": "Ab3xYz..."
+  }
+}
+```
+
+| Case | HTTP | `code` |
+|------|------|--------|
+| Missing token | 401 | `2500` |
+| Invalid token | 401 | `190` |
+| Invalid body / unknown `message_id` | 400 | `100` |
+| Unexpected server error | 500 | `1` |
+
 ### Webhook Signature
 
 Every webhook is signed like Meta does: the `X-Hub-Signature-256` header holds
@@ -589,7 +612,7 @@ pnpm test:watch
 - Verify Bearer token matches `.env` `API_ACCESS_TOKEN`
 - Include `Authorization: Bearer <token>` header
 - Authentication runs before body validation: a missing or wrong token always
-  returns `401`, even if the body is invalid
+  returns `401` (codes `2500` / `190`), even if the body is invalid
 
 ### Webhook signature mismatch
 
