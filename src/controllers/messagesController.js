@@ -9,6 +9,10 @@ async function sendMessage(request, reply) {
   const { wabaId } = request.params;
   const message = request.body;
 
+  if (message.status === 'read') {
+    return markAsRead(request, reply);
+  }
+
   request.log.info({ wabaId, type: message.type, to: message.to }, 'Received message request');
 
   const messageId = IdGenerator.generateWamid();
@@ -17,6 +21,31 @@ async function sendMessage(request, reply) {
   request.log.info({ messageId, recipient: message.to, type: message.type }, 'Message accepted');
 
   return response;
+}
+
+/**
+ * Mark an inbound message as read (and optionally show typing indicator)
+ */
+async function markAsRead(request, reply) {
+  const { message_id: messageId, typing_indicator: typingIndicator } = request.body;
+
+  if (!inboundService.markAsRead(messageId)) {
+    return reply.status(400).send({
+      error: {
+        message: '(#100) Invalid parameter',
+        type: 'OAuthException',
+        code: 100,
+        error_data: {
+          messaging_product: 'whatsapp',
+          details: `Message ${messageId} not found`
+        }
+      }
+    });
+  }
+
+  request.log.info({ messageId, typing: Boolean(typingIndicator) }, 'Inbound message marked as read');
+
+  return { success: true };
 }
 
 /**

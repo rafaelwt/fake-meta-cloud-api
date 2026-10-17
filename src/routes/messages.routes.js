@@ -1,5 +1,13 @@
 const messageRequestSchema = require('../schemas/messageRequest.schema');
 const inboundRequestSchema = require('../schemas/inboundRequest.schema');
+const markReadRequestSchema = require('../schemas/markReadRequest.schema');
+
+// Same endpoint sends messages or marks inbound messages as read (status: 'read')
+const messagesBodySchema = {
+  if: { required: ['status'] },
+  then: markReadRequestSchema,
+  else: messageRequestSchema
+};
 
 // Accept any Graph API version prefix (e.g. v19.0, v26.0), like the real API
 const VERSION = ':version(^v\\d+\\.\\d+$)';
@@ -13,11 +21,11 @@ async function messagesRoutes(fastify, options) {
 
   /**
    * POST /:version/:wabaId/messages
-   * Send a WhatsApp message
+   * Send a WhatsApp message, or mark an inbound message as read
    */
   fastify.post(`/${VERSION}/:wabaId/messages`, {
     schema: {
-      body: messageRequestSchema,
+      body: messagesBodySchema,
       params: {
         type: 'object',
         properties: {

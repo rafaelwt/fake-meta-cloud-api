@@ -75,7 +75,17 @@ function buildInboundPayload(message) {
   };
 }
 
+/**
+ * Mark an inbound message as read (optionally with typing indicator)
+ * @param {string} messageId - Inbound message ID
+ * @returns {boolean} - False if the message does not exist
+ */
+function markAsRead(messageId) {
+  return Boolean(inboundMessageModel.findById(messageId));
+}
+
 module.exports = {
   processInbound,
+  markAsRead,
   buildInboundPayload
 };

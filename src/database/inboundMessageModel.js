@@ -16,6 +16,10 @@ class InboundMessageModel {
         ) VALUES (?, ?, ?, ?, ?, ?)
       `),
 
+      findById: db.prepare(`
+        SELECT * FROM inbound_messages WHERE id = ?
+      `),
+
       findLastReceivedAt: db.prepare(`
         SELECT MAX(received_at) AS received_at FROM inbound_messages
         WHERE from_id = ?
@@ -41,6 +45,15 @@ class InboundMessageModel {
     );
 
     return { ...message, received_at: now };
+  }
+
+  /**
+   * Find an inbound message by ID
+   * @param {string} id - Message ID
+   * @returns {object|undefined} - Inbound message
+   */
+  findById(id) {
+    return this.stmts.findById.get(id);
   }
 
   /**
