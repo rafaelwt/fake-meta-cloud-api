@@ -26,6 +26,16 @@ test('health reports the database as connected', async () => {
   assert.equal(res.json().database, 'connected');
 });
 
+test('health reports disconnected when the database is closed', async () => {
+  const closed = require('fastify')();
+  closed.decorate('db', { open: false });
+  closed.register(require('../src/routes/health'));
+  const res = await closed.inject({ method: 'GET', url: '/health' });
+  await closed.close();
+
+  assert.equal(res.json().database, 'disconnected');
+});
+
 test('ready returns 200 when the database is open', async () => {
   const res = await app.inject({ method: 'GET', url: '/ready' });
 

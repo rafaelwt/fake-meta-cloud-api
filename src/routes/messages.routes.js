@@ -4,7 +4,11 @@ const markReadRequestSchema = require('../schemas/markReadRequest.schema');
 
 // Same endpoint sends messages or marks inbound messages as read (status: 'read')
 const messagesBodySchema = {
-  if: { required: ['status'] },
+  if: {
+    type: 'object',
+    required: ['status'],
+    properties: { status: { const: 'read' } }
+  },
   then: markReadRequestSchema,
   else: messageRequestSchema
 };

@@ -132,6 +132,13 @@ test('mark as read with an unknown message id fails like Meta', async () => {
   assert.equal(res.json().error.code, 100);
 });
 
+test('a send request with an extra status key is still a send', async () => {
+  const res = await send({ ...message('text', { body: 'hi' }), status: 'sent' });
+
+  assert.equal(res.statusCode, 200, res.body);
+  assert.equal(res.json().messages[0].message_status, 'accepted');
+});
+
 test('mark as read requires message_id', async () => {
   const res = await send({ messaging_product: 'whatsapp', status: 'read' });
 
