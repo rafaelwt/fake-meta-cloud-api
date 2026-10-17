@@ -13,6 +13,8 @@ Mock implementation of WhatsApp Business Cloud API for testing and development. 
 - **Fastify + Pino**: High-performance server with structured logging
 - **Versioned API**: any `/vNN.0/` prefix is accepted (docs use `v26.0`)
 - **Signed Webhooks**: `X-Hub-Signature-256` header, verifiable with your app secret
+- **Inbound Messages**: simulate users writing to the business (`messages[]` webhook)
+- **Service Window**: optional 24h customer service window enforcement (error 131047)
 
 ## Architecture
 
@@ -88,6 +90,7 @@ DELAY_READ_MAX=10000
 
 # Behavior
 READ_PROBABILITY=0.7  # 70% chance of read status
+SERVICE_WINDOW_ENFORCED=false  # true: free-form messages need an inbound message in the last 24h
 
 # Error Patterns (phone:error_code)
 ERROR_PATTERNS=+99999:131026,+88888:131047,+77777:131031
@@ -227,6 +230,59 @@ curl -X GET http://localhost:3000/v26.0/123456789012345/webhooks/events \
 curl -X GET "http://localhost:3000/v26.0/123456789012345/webhooks/events?messageId=wamid.ABC123" \
   -H "Authorization: Bearer your_fake_bearer_token_here"
 ```
+
+#### 7. Simulate Inbound Message (fake-only)
+
+Simulates a user writing to the business. Your webhook receives a signed
+`messages[]` payload like Meta's, and the user's 24h service window opens.
+
+```bash
+curl -X POST http://localhost:3000/v26.0/123456789012345/simulate/inbound \
+  -H "Authorization: Bearer your_fake_bearer_token_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "+59179021784",
+    "name": "Ana",
+    "text": { "body": "Hola!" }
+  }'
+```
+
+Webhook payload:
+
+```json
+{
+  "object": "whatsapp_business_account",
+  "entry": [{
+    "id": "123456789012345",
+    "changes": [{
+      "value": {
+        "messaging_product": "whatsapp",
+        "metadata": {
+          "display_phone_number": "+1234567890",
+          "phone_number_id": "987654321098765"
+        },
+        "contacts": [{ "profile": { "name": "Ana" }, "wa_id": "59179021784" }],
+        "messages": [{
+          "from": "59179021784",
+          "id": "wamid.HBgLNTkxNzkwMjE3ODQVAgARGBI...",
+          "timestamp": "1748718740",
+          "type": "text",
+          "text": { "body": "Hola!" }
+        }]
+      },
+      "field": "messages"
+    }]
+  }]
+}
+```
+
+### Customer Service Window
+
+With `SERVICE_WINDOW_ENFORCED=true`, free-form (non-template) messages are only
+delivered if the recipient sent an inbound message in the last 24 hours. Otherwise
+the request is still `accepted`, and the status flow ends with a `failed` webhook
+carrying error `131047` (Re-engagement message), like Meta. Template messages are
+always allowed. Error patterns take precedence over the window check.
 
 ### Webhook Signature
 
@@ -376,6 +432,7 @@ fake-meta-cloud-api/
 │   │   ├── connection.js             # SQLite setup
 │   │   ├── models.js                 # Model instances
 │   │   ├── messageModel.js           # Message CRUD
+│   │   ├── inboundMessageModel.js    # Simulated user messages
 │   │   ├── webhookEventModel.js      # Webhook logs
 │   │   └── schema.sql                # Database schema
 │   ├── events/
@@ -388,9 +445,11 @@ fake-meta-cloud-api/
 │   │   ├── health.js                 # Health check
 │   │   └── messages.routes.js        # Versioned message endpoints
 │   ├── schemas/
-│   │   └── messageRequest.schema.js  # Validation schemas
+│   │   ├── messageRequest.schema.js  # Validation schemas
+│   │   └── inboundRequest.schema.js  # Simulated inbound schema
 │   ├── services/
-│   │   ├── messageService.js         # Message orchestration
+│   │   ├── messageService.js         # Message orchestration + service window
+│   │   ├── inboundService.js         # Simulated inbound messages
 │   │   └── webhookService.js         # Signed HTTP webhook delivery
 │   ├── utils/
 │   │   ├── delays.js                 # Random delay helpers
