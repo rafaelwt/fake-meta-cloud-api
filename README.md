@@ -12,6 +12,7 @@ Mock implementation of WhatsApp Business Cloud API for testing and development. 
 - **Strict Validation**: JSON Schema validation matching Meta's API spec
 - **Fastify + Pino**: High-performance server with structured logging
 - **Versioned API**: any `/vNN.0/` prefix is accepted (docs use `v26.0`)
+- **Signed Webhooks**: `X-Hub-Signature-256` header, verifiable with your app secret
 
 ## Architecture
 
@@ -68,6 +69,9 @@ WEBHOOK_URL=http://localhost:4000/webhook
 
 # Authentication
 API_ACCESS_TOKEN=your_fake_bearer_token_here
+
+# App secret used to sign webhooks (X-Hub-Signature-256)
+APP_SECRET=your_fake_app_secret_here
 
 # WhatsApp Business Account IDs
 WABA_ID=123456789012345
@@ -224,6 +228,22 @@ curl -X GET "http://localhost:3000/v26.0/123456789012345/webhooks/events?message
   -H "Authorization: Bearer your_fake_bearer_token_here"
 ```
 
+### Webhook Signature
+
+Every webhook is signed like Meta does: the `X-Hub-Signature-256` header holds
+`sha256=` followed by the HMAC-SHA256 of the raw request body, keyed with
+`APP_SECRET`. Verify it against the raw body, before parsing JSON:
+
+```js
+const crypto = require('crypto');
+
+function isValidSignature(rawBody, header, appSecret) {
+  const expected = 'sha256=' + crypto.createHmac('sha256', appSecret).update(rawBody).digest('hex');
+  return header?.length === expected.length &&
+    crypto.timingSafeEqual(Buffer.from(header), Buffer.from(expected));
+}
+```
+
 ### Webhook Payloads
 
 After sending a message, your webhook URL will receive POST requests:
@@ -347,55 +367,56 @@ curl -X POST http://localhost:3000/v26.0/123456789012345/messages \
 ```
 fake-meta-cloud-api/
 ├── src/
-│   ├── api/
-│   │   └── v23/
-│   │       └── messages/
-│   │           └── index.js          # Message endpoints
 │   ├── config/
 │   │   ├── index.js                  # Centralized config
 │   │   └── errorCodes.js             # Meta error codes
+│   ├── controllers/
+│   │   └── messagesController.js     # Route handlers
 │   ├── database/
 │   │   ├── connection.js             # SQLite setup
+│   │   ├── models.js                 # Model instances
 │   │   ├── messageModel.js           # Message CRUD
 │   │   ├── webhookEventModel.js      # Webhook logs
 │   │   └── schema.sql                # Database schema
+│   ├── events/
+│   │   ├── bus.js                    # EventEmitter bus
+│   │   ├── emitter.js                # Status flow + webhook payloads
+│   │   └── listeners/                # sent/delivered/read/failed handlers
 │   ├── middleware/
-│   │   └── auth.middleware.js        # Bearer token auth
+│   │   └── auth.middleware.js        # Bearer token auth (onRequest)
 │   ├── routes/
-│   │   └── health.js                 # Health check
+│   │   ├── health.js                 # Health check
+│   │   └── messages.routes.js        # Versioned message endpoints
 │   ├── schemas/
 │   │   └── messageRequest.schema.js  # Validation schemas
 │   ├── services/
 │   │   ├── messageService.js         # Message orchestration
-│   │   ├── statusEmitter.js          # EventEmitter (webhooks)
-│   │   └── webhookService.js         # HTTP webhook delivery
+│   │   └── webhookService.js         # Signed HTTP webhook delivery
 │   ├── utils/
 │   │   ├── delays.js                 # Random delay helpers
 │   │   ├── errorPatterns.js          # Pattern matching
-│   │   └── idGenerator.js            # wamid generation
+│   │   ├── idGenerator.js            # wamid generation
+│   │   ├── signature.js              # X-Hub-Signature-256
+│   │   └── templateCategories.js     # Template pricing categories
+│   ├── logger.js                     # Pino logger
 │   └── server.js                     # Fastify app
+├── tests/                            # node:test suites
 ├── docs/
 │   ├── json-meta-status.md           # Webhook examples
-│   └── send-template.md              # Template examples
+│   └── send-teamplate.md             # Template examples
 ├── data/                             # SQLite database (created on run)
 ├── .env                              # Your config (not in git)
 ├── .env.example                      # Config template
 ├── index.js                          # Entry point
 ├── package.json
+├── pnpm-workspace.yaml
 └── README.md
 ```
 
-## Adding New API Versions
+## API Versions
 
-To add v24:
-
-1. Create `src/api/v24/messages/index.js`
-2. Copy from `src/api/v23/messages/index.js`
-3. Modify route path to `/v24.0/:wabaId/messages`
-4. Register in `src/server.js`:
-   ```js
-   app.register(require('./api/v24/messages'), { auth: authMiddleware });
-   ```
+Routes accept any `vNN.N` prefix (`/v19.0/...`, `/v26.0/...`), so clients can
+keep their configured Graph API version. Unknown prefixes return 404.
 
 ## Development
 
@@ -458,6 +479,13 @@ pnpm test:watch
 
 - Verify Bearer token matches `.env` `API_ACCESS_TOKEN`
 - Include `Authorization: Bearer <token>` header
+- Authentication runs before body validation: a missing or wrong token always
+  returns `401`, even if the body is invalid
+
+### Webhook signature mismatch
+
+- `APP_SECRET` must match the app secret your webhook handler uses
+- Compute the HMAC over the raw body bytes, not over re-serialized JSON
 
 ## License
 
