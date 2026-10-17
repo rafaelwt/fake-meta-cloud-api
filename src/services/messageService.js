@@ -26,7 +26,12 @@ function processMessage(message, messageId, wabaId) {
   });
 
   // Start async webhook flow
-  const messageData = { id: messageId, recipient_id: recipientId, type: message.type };
+  const messageData = {
+    id: messageId,
+    recipient_id: recipientId,
+    type: message.type,
+    template_name: message.template?.name
+  };
   startMessageFlow(messageData, config.webhook.url, errorCode);
 
   // Return immediate response

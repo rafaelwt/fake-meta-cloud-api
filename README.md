@@ -87,7 +87,17 @@ READ_PROBABILITY=0.7  # 70% chance of read status
 
 # Error Patterns (phone:error_code)
 ERROR_PATTERNS=+99999:131026,+88888:131047,+77777:131031
+
+# Template pricing categories (template_name:category, trailing * = prefix)
+TEMPLATE_CATEGORIES=otp_*:authentication,order_update:utility
+TEMPLATE_DEFAULT_CATEGORY=marketing
 ```
+
+Status webhooks report per-message pricing (`PMP`): free-form messages are
+`free_customer_service` / `service` (not billable); template messages are
+`regular` and billable, with the category resolved from `TEMPLATE_CATEGORIES`
+(`marketing`, `utility` or `authentication`), falling back to
+`TEMPLATE_DEFAULT_CATEGORY`.
 
 ## Usage
 
