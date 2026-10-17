@@ -594,6 +594,11 @@ LOG_LEVEL=debug pnpm dev
 LOG_PRETTY=false pnpm start
 ```
 
+Log files (`combined.log`, `info.log`, `error.log`) go to `./logs` by default.
+Set `LOG_DIR` to write them elsewhere (e.g. a Docker volume). Test runs
+(`pnpm test`) write to a temp directory instead, so they never mix with the
+server logs.
+
 ### Testing
 
 ```bash
