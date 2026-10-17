@@ -26,7 +26,7 @@ async function messagesRoutes(fastify, options) {
         required: ['version', 'wabaId']
       }
     },
-    preHandler: auth
+    onRequest: auth
   }, handlers.sendMessage);
 
   /**
@@ -34,7 +34,7 @@ async function messagesRoutes(fastify, options) {
    * Get message statistics (debugging)
    */
   fastify.get(`/${VERSION}/:wabaId/messages/stats`, {
-    preHandler: auth
+    onRequest: auth
   }, handlers.getStats);
 
   /**
@@ -42,7 +42,7 @@ async function messagesRoutes(fastify, options) {
    * Get webhook events (debugging)
    */
   fastify.get(`/${VERSION}/:wabaId/webhooks/events`, {
-    preHandler: auth
+    onRequest: auth
   }, handlers.getWebhookEvents);
 }
 
