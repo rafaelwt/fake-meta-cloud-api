@@ -31,7 +31,8 @@
   },
   "devDependencies": {
     "@fastify/swagger": "^9.9.2",
-    "@scalar/fastify-api-reference": "^1.75.0"
+    "@scalar/fastify-api-reference": "^1.75.0",
+    "ajv": "^8.20.0"
   },
   "engines": {
     "node": ">=22.0.0"

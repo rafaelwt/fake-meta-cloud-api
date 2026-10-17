@@ -20,8 +20,6 @@ require('./events/listeners/failedListener');
 function createServer() {
   const app = fastify({
     loggerInstance: logger,
-    requestIdLogLabel: 'reqId',
-    disableRequestLogging: false,
     trustProxy: true
   });
 
