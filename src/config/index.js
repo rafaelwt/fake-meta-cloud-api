@@ -61,6 +61,12 @@ const config = {
     patterns: process.env.ERROR_PATTERNS || '+99999:131026,+88888:131047,+77777:131031'
   },
 
+  // Template pricing categories
+  templates: {
+    categories: process.env.TEMPLATE_CATEGORIES || '',
+    defaultCategory: process.env.TEMPLATE_DEFAULT_CATEGORY || 'marketing'
+  },
+
   // Logging
   logging: {
     level: process.env.LOG_LEVEL || 'info',

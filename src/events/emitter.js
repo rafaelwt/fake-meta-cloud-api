@@ -1,6 +1,7 @@
 const eventBus = require('./bus');
 const { randomDelay } = require('../utils/delays');
 const config = require('../config');
+const { parseTemplateCategories, resolveTemplateCategory } = require('../utils/templateCategories');
 const logger = require('../logger');
 
 const log = logger.child({ component: 'emitter' });
@@ -79,8 +80,8 @@ function scheduleErrorFlow(messageData, webhookUrl, errorCode) {
 
 /**
  * Build per-message pricing object
- * Templates are billed as marketing; free-form messages fall in the
- * customer service window and are free
+ * Templates are billed by their configured category; free-form messages
+ * fall in the customer service window and are free
  * @private
  */
 function buildPricing(messageData) {
@@ -89,7 +90,11 @@ function buildPricing(messageData) {
       billable: true,
       pricing_model: 'PMP',
       type: 'regular',
-      category: 'marketing'
+      category: resolveTemplateCategory(
+        messageData.template_name || '',
+        parseTemplateCategories(config.templates.categories),
+        config.templates.defaultCategory
+      )
     };
   }
 
