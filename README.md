@@ -11,7 +11,7 @@ Mock implementation of WhatsApp Business Cloud API for testing and development. 
 - **Error Simulation**: Pattern-based automatic error triggering
 - **Strict Validation**: JSON Schema validation matching Meta's API spec
 - **Fastify + Pino**: High-performance server with structured logging
-- **Versioned API**: `/v19.0/` endpoints, easy to add new versions
+- **Versioned API**: any `/vNN.0/` prefix is accepted (docs use `v26.0`)
 
 ## Architecture
 
@@ -45,7 +45,7 @@ Client                    Fake API                   Your System
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Copy environment configuration
 cp .env.example .env
@@ -95,10 +95,10 @@ ERROR_PATTERNS=+99999:131026,+88888:131047,+77777:131031
 
 ```bash
 # Production mode
-npm start
+pnpm start
 
 # Development mode (with auto-reload)
-npm run dev
+pnpm dev
 ```
 
 ### API Endpoints
@@ -106,7 +106,7 @@ npm run dev
 #### 1. Send Template Message
 
 ```bash
-curl -X POST http://localhost:3000/v19.0/123456789012345/messages \
+curl -X POST http://localhost:3000/v26.0/123456789012345/messages \
   -H "Authorization: Bearer your_fake_bearer_token_here" \
   -H "Content-Type: application/json" \
   -d '{
@@ -146,7 +146,7 @@ curl -X POST http://localhost:3000/v19.0/123456789012345/messages \
 #### 2. Send Text Message
 
 ```bash
-curl -X POST http://localhost:3000/v19.0/123456789012345/messages \
+curl -X POST http://localhost:3000/v26.0/123456789012345/messages \
   -H "Authorization: Bearer your_fake_bearer_token_here" \
   -H "Content-Type: application/json" \
   -d '{
@@ -163,7 +163,7 @@ curl -X POST http://localhost:3000/v19.0/123456789012345/messages \
 #### 3. Send Image
 
 ```bash
-curl -X POST http://localhost:3000/v19.0/123456789012345/messages \
+curl -X POST http://localhost:3000/v26.0/123456789012345/messages \
   -H "Authorization: Bearer your_fake_bearer_token_here" \
   -H "Content-Type: application/json" \
   -d '{
@@ -180,7 +180,7 @@ curl -X POST http://localhost:3000/v19.0/123456789012345/messages \
 #### 4. Send Document
 
 ```bash
-curl -X POST http://localhost:3000/v19.0/123456789012345/messages \
+curl -X POST http://localhost:3000/v26.0/123456789012345/messages \
   -H "Authorization: Bearer your_fake_bearer_token_here" \
   -H "Content-Type: application/json" \
   -d '{
@@ -198,7 +198,7 @@ curl -X POST http://localhost:3000/v19.0/123456789012345/messages \
 #### 5. Get Message Statistics
 
 ```bash
-curl -X GET http://localhost:3000/v19.0/123456789012345/messages/stats \
+curl -X GET http://localhost:3000/v26.0/123456789012345/messages/stats \
   -H "Authorization: Bearer your_fake_bearer_token_here"
 ```
 
@@ -206,11 +206,11 @@ curl -X GET http://localhost:3000/v19.0/123456789012345/messages/stats \
 
 ```bash
 # All recent events
-curl -X GET http://localhost:3000/v19.0/123456789012345/webhooks/events \
+curl -X GET http://localhost:3000/v26.0/123456789012345/webhooks/events \
   -H "Authorization: Bearer your_fake_bearer_token_here"
 
 # Events for specific message
-curl -X GET "http://localhost:3000/v19.0/123456789012345/webhooks/events?messageId=wamid.ABC123" \
+curl -X GET "http://localhost:3000/v26.0/123456789012345/webhooks/events?messageId=wamid.ABC123" \
   -H "Authorization: Bearer your_fake_bearer_token_here"
 ```
 
@@ -236,14 +236,11 @@ After sending a message, your webhook URL will receive POST requests:
           "status": "sent",
           "timestamp": "1748718745",
           "recipient_id": "59179021784",
-          "conversation": {
-            "id": "abc123...",
-            "origin": { "type": "business_initiated" }
-          },
           "pricing": {
-            "billable": true,
-            "pricing_model": "CBP",
-            "category": "business_initiated"
+            "billable": false,
+            "pricing_model": "PMP",
+            "type": "free_customer_service",
+            "category": "service"
           }
         }]
       },
@@ -262,12 +259,7 @@ After sending a message, your webhook URL will receive POST requests:
     "status": "delivered",
     "timestamp": "1748718750",
     "recipient_id": "59179021784",
-    "conversation": {
-      "id": "abc123...",
-      "expiration_timestamp": "1748804145",
-      "origin": { "type": "business_initiated" }
-    },
-    ...
+    "pricing": { ... }
   }]
 }
 ```
@@ -329,7 +321,7 @@ ERROR_PATTERNS=+99999:131026,+88888:131047,+77777:131031
 
 ```bash
 # This will fail with error 131026
-curl -X POST http://localhost:3000/v19.0/123456789012345/messages \
+curl -X POST http://localhost:3000/v26.0/123456789012345/messages \
   -H "Authorization: Bearer your_fake_bearer_token_here" \
   -H "Content-Type: application/json" \
   -d '{
@@ -418,20 +410,20 @@ Pino logger with pretty printing in development:
 
 ```bash
 # Set log level
-LOG_LEVEL=debug npm run dev
+LOG_LEVEL=debug pnpm dev
 
 # Disable pretty printing
-LOG_PRETTY=false npm start
+LOG_PRETTY=false pnpm start
 ```
 
 ### Testing
 
 ```bash
 # Unit tests
-npm test
+pnpm test
 
 # Watch mode
-npm run test:watch
+pnpm test:watch
 ```
 
 ## Troubleshooting
@@ -442,7 +434,7 @@ npm run test:watch
 2. Make sure your webhook server is running
 3. Check webhook logs:
    ```bash
-   curl http://localhost:3000/v19.0/123456789012345/webhooks/events \
+   curl http://localhost:3000/v26.0/123456789012345/webhooks/events \
      -H "Authorization: Bearer your_token"
    ```
 

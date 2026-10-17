@@ -48,9 +48,9 @@ function createServer() {
       endpoints: {
         health: '/health',
         ready: '/ready',
-        messages: 'POST /v19.0/:wabaId/messages',
-        stats: 'GET /v19.0/:wabaId/messages/stats',
-        webhook_events: 'GET /v19.0/:wabaId/webhooks/events'
+        messages: 'POST /v26.0/:wabaId/messages',
+        stats: 'GET /v26.0/:wabaId/messages/stats',
+        webhook_events: 'GET /v26.0/:wabaId/webhooks/events'
       },
       documentation: 'See README.md for usage examples'
     };

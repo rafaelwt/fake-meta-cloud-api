@@ -3,7 +3,7 @@
 ## Endpoint
 
 ```
-POST https://graph.facebook.com/v19.0/<waba-id>/messages
+POST https://graph.facebook.com/v26.0/<waba-id>/messages
 ```
 
 **Nota:** Reemplaza `<waba-id>` con el ID de tu WhatsApp Business Account.

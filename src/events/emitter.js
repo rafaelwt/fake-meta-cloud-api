@@ -1,6 +1,5 @@
 const eventBus = require('./bus');
 const { randomDelay } = require('../utils/delays');
-const IdGenerator = require('../utils/idGenerator');
 const config = require('../config');
 const logger = require('../logger');
 
@@ -79,6 +78,30 @@ function scheduleErrorFlow(messageData, webhookUrl, errorCode) {
 }
 
 /**
+ * Build per-message pricing object
+ * Templates are billed as marketing; free-form messages fall in the
+ * customer service window and are free
+ * @private
+ */
+function buildPricing(messageData) {
+  if (messageData.type === 'template') {
+    return {
+      billable: true,
+      pricing_model: 'PMP',
+      type: 'regular',
+      category: 'marketing'
+    };
+  }
+
+  return {
+    billable: false,
+    pricing_model: 'PMP',
+    type: 'free_customer_service',
+    category: 'service'
+  };
+}
+
+/**
  * Build webhook payload for a given status
  * @param {object} messageData - Message data
  * @param {string} status - Status type
@@ -96,22 +119,10 @@ function buildWebhookPayload(messageData, status, errorCode = null) {
     recipient_id: messageData.recipient_id
   };
 
-  // Add conversation and pricing for sent/delivered
+  // Add per-message pricing (PMP) for sent/delivered.
+  // Since v24.0 the conversation object is omitted (except free entry point).
   if (status === 'sent' || status === 'delivered') {
-    statusObject.conversation = {
-      id: IdGenerator.generateConversationId(),
-      origin: { type: 'business_initiated' }
-    };
-
-    if (status === 'delivered') {
-      statusObject.conversation.expiration_timestamp = (parseInt(timestamp) + 86400).toString();
-    }
-
-    statusObject.pricing = {
-      billable: true,
-      pricing_model: 'CBP',
-      category: 'business_initiated'
-    };
+    statusObject.pricing = buildPricing(messageData);
   }
 
   // Add errors for failed status
