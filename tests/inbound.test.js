@@ -124,9 +124,10 @@ test('free-form message outside the window fails with 131047', async () => {
 
   const messageId = res.json().messages[0].id;
   await wait(50);
-  const failed = statusesFor(messageId).find(s => s.status === 'failed');
-  assert.ok(failed, 'failed webhook was not received');
-  assert.equal(failed.errors[0].code, 131047);
+  const statuses = statusesFor(messageId);
+  // Like Meta: a failed message gets only the failed status, no sent before it
+  assert.deepEqual(statuses.map(s => s.status), ['failed']);
+  assert.equal(statuses[0].errors[0].code, 131047);
 });
 
 test('template message outside the window is delivered', async () => {

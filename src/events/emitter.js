@@ -58,20 +58,14 @@ function scheduleNormalFlow(messageData, webhookUrl) {
 
 /**
  * Schedule error flow (message fails)
+ * Like Meta, a failed message only gets the failed status (no sent before it)
  * @private
  */
 function scheduleErrorFlow(messageData, webhookUrl, errorCode) {
   const { delays } = config;
 
-  // 1. SENT (after 0.5-2 seconds)
-  const sentDelay = randomDelay(delays.sent.min, delays.sent.max);
-  setTimeout(() => {
-    log.debug({ messageId: messageData.id, delay: sentDelay }, 'Emitting status:sent');
-    eventBus.emit('status:sent', messageData, webhookUrl);
-  }, sentDelay);
-
-  // 2. FAILED (after 3-5 seconds)
-  const failedDelay = randomDelay(delays.delivered.min, delays.delivered.max);
+  // FAILED (after 0.5-2 seconds, when sent would have arrived)
+  const failedDelay = randomDelay(delays.sent.min, delays.sent.max);
   setTimeout(() => {
     log.debug({ messageId: messageData.id, errorCode, delay: failedDelay }, 'Emitting status:failed');
     eventBus.emit('status:failed', messageData, webhookUrl, errorCode);

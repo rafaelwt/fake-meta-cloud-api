@@ -41,6 +41,12 @@ async function start() {
 
   } catch (err) {
     app.log.error(err, 'Failed to start server');
+    // Logs may go only to files; make startup failures visible in the terminal
+    if (err.code === 'EADDRINUSE') {
+      console.error(`Failed to start server: port ${config.server.port} is already in use. Stop the other process or set PORT in .env`);
+    } else {
+      console.error(`Failed to start server: ${err.message}`);
+    }
     process.exit(1);
   }
 }

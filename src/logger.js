@@ -10,7 +10,7 @@ const config = require('./config');
  */
 
 // Ensure logs directory exists
-const logsDir = path.join(__dirname, '..', 'logs');
+const logsDir = config.logging.dir;
 if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }

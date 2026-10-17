@@ -6,7 +6,7 @@ Mock implementation of WhatsApp Business Cloud API for testing and development. 
 
 - **Full Message Support**: template, text, image, document, audio, video, sticker, interactive, reaction, location and contacts messages, plus replies (`context`)
 - **Mark as Read**: mark inbound messages as read, with optional typing indicator
-- **Async Webhooks**: EventEmitter-based webhook delivery (sent → delivered → read/failed)
+- **Async Webhooks**: EventEmitter-based webhook delivery (sent → delivered → read, or failed only)
 - **Realistic Timing**: Configurable delays to simulate real Meta API behavior
 - **SQLite Persistence**: Message and webhook event history
 - **Error Simulation**: Pattern-based automatic error triggering
@@ -450,7 +450,7 @@ After sending a message, your webhook URL will receive POST requests:
 }
 ```
 
-**4. FAILED Status** (if error pattern matches):
+**4. FAILED Status** (0.5-2 seconds later, if an error pattern matches or the service window is closed). Like Meta, a failed message gets only this status, without a previous `sent`:
 ```json
 {
   ...
@@ -593,6 +593,11 @@ LOG_LEVEL=debug pnpm dev
 # Disable pretty printing
 LOG_PRETTY=false pnpm start
 ```
+
+Log files (`combined.log`, `info.log`, `error.log`) go to `./logs` by default.
+Set `LOG_DIR` to write them elsewhere (e.g. a Docker volume). Test runs
+(`pnpm test`) write to a temp directory instead, so they never mix with the
+server logs.
 
 ### Testing
 

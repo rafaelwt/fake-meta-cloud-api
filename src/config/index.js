@@ -1,4 +1,5 @@
 require('dotenv').config({ quiet: true });
+const { resolveLogDir } = require('../utils/logDir');
 
 /**
  * Centralized configuration for the fake Meta Cloud API
@@ -72,6 +73,7 @@ const config = {
 
   // Logging
   logging: {
+    dir: resolveLogDir(process.env),
     level: process.env.LOG_LEVEL || 'info',
     pretty: process.env.LOG_PRETTY === 'true'
   }
