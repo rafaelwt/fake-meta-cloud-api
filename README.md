@@ -126,6 +126,7 @@ In development (`NODE_ENV=development`, the default) the server exposes an
 interactive reference built from the route schemas:
 
 - `http://localhost:3000/docs/`: Scalar UI, with a named example per message type and a request runner
+  and documented responses (success bodies and Meta-format errors)
 - `http://localhost:3000/docs/openapi.json`: OpenAPI 3.1 document (also `/docs/openapi.yaml`)
 
 Force it on or off with `DOCS_ENABLED=true|false`. The docs packages are

@@ -194,6 +194,9 @@ importers:
       '@scalar/fastify-api-reference':
         specifier: ^1.75.0
         version: 1.75.0
+      ajv:
+        specifier: ^8.20.0
+        version: 8.20.0
 
 packages:
 

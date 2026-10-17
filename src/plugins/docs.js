@@ -1,6 +1,7 @@
 const messageRequestSchema = require('../schemas/messageRequest.schema');
 const markReadRequestSchema = require('../schemas/markReadRequest.schema');
 const messageExamples = require('../docs/messageExamples');
+const { findResponseSchemas } = require('../docs/responseSchemas');
 
 /**
  * API reference (OpenAPI + Scalar) for development
@@ -81,10 +82,15 @@ function registerDocs(app, config) {
       ]
     },
     transform: ({ schema, url, route }) => {
-      if (route.method === 'POST' && url.endsWith('/messages')) {
-        return { schema: { ...schema, body: buildMessagesDocsBody() }, url };
+      const docsSchema = { ...schema };
+      const response = findResponseSchemas(route.method, url);
+      if (response) {
+        docsSchema.response = response;
       }
-      return { schema, url };
+      if (route.method === 'POST' && url.endsWith('/messages')) {
+        docsSchema.body = buildMessagesDocsBody();
+      }
+      return { schema: docsSchema, url };
     }
   });
 
