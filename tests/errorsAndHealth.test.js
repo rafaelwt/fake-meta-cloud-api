@@ -73,6 +73,7 @@ test('invalid token follows Meta error format', async () => {
   const { error } = res.json();
   assert.equal(error.type, 'OAuthException');
   assert.equal(error.code, 190);
+  assert.equal(error.error_subcode, 467);
   assert.match(error.fbtrace_id, /^[A-Za-z0-9_-]{20,}$/);
 });
 
@@ -82,4 +83,27 @@ test('missing token follows Meta error format', async () => {
   assert.equal(res.statusCode, 401);
   assert.equal(res.json().error.code, 2500);
   assert.equal(res.json().error.type, 'OAuthException');
+  assert.equal('error_subcode' in res.json().error, false);
+});
+
+test('unknown paths follow Meta format', async () => {
+  const res = await app.inject({ method: 'GET', url: '/v26.0/123/nope?x=1' });
+
+  assert.equal(res.statusCode, 400);
+  const { error } = res.json();
+  assert.equal(error.message, 'Unknown path components: /v26.0/123/nope');
+  assert.equal(error.type, 'OAuthException');
+  assert.equal(error.code, 2500);
+  assert.match(error.fbtrace_id, /^[A-Za-z0-9_-]{20,}$/);
+});
+
+test('validation errors carry no error_subcode', async () => {
+  const res = await app.inject({
+    method: 'POST',
+    url: '/v26.0/123/messages',
+    headers: { authorization: 'Bearer good_token' },
+    payload: {}
+  });
+
+  assert.equal('error_subcode' in res.json().error, false);
 });

@@ -350,12 +350,13 @@ Errors use Meta's Graph API format:
 }
 ```
 
-| Case | HTTP | `code` |
-|------|------|--------|
-| Missing token | 401 | `2500` |
-| Invalid token | 401 | `190` |
-| Invalid body / unknown `message_id` | 400 | `100` |
-| Unexpected server error | 500 | `1` |
+| Case | HTTP | `code` | `error_subcode` |
+|------|------|--------|-----------------|
+| Missing token | 401 | `2500` | — |
+| Invalid token | 401 | `190` | `467` |
+| Invalid body / unknown `message_id` | 400 | `100` | — (details in `error_data`) |
+| Unknown path | 400 | `2500` | — |
+| Unexpected server error | 500 | `1` | — |
 
 ### Webhook Signature
 
@@ -548,7 +549,8 @@ fake-meta-cloud-api/
 ## API Versions
 
 Routes accept any `vNN.N` prefix (`/v19.0/...`, `/v26.0/...`), so clients can
-keep their configured Graph API version. Unknown prefixes return 404.
+keep their configured Graph API version. Unknown prefixes or paths return
+`400` with code `2500` (`Unknown path components`), like Graph API.
 
 ## Development
 

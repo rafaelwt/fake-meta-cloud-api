@@ -61,6 +61,12 @@ function createServer() {
     };
   });
 
+  // Unknown routes answer like Graph API (HTTP 400, code 2500)
+  app.setNotFoundHandler((request, reply) => {
+    const path = request.url.split('?')[0];
+    reply.status(400).send(metaError(2500, `Unknown path components: ${path}`));
+  });
+
   // Error handler
   app.setErrorHandler((error, request, reply) => {
     request.log.error({
