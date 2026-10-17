@@ -237,10 +237,10 @@ Every webhook is signed like Meta does: the `X-Hub-Signature-256` header holds
 ```js
 const crypto = require('crypto');
 
-function isValidSignature(rawBody, header, appSecret) {
-  const expected = 'sha256=' + crypto.createHmac('sha256', appSecret).update(rawBody).digest('hex');
-  return header?.length === expected.length &&
-    crypto.timingSafeEqual(Buffer.from(header), Buffer.from(expected));
+function isValidSignature(rawBody, header = '', appSecret) {
+  const expected = Buffer.from('sha256=' + crypto.createHmac('sha256', appSecret).update(rawBody).digest('hex'));
+  const received = Buffer.from(header);
+  return received.length === expected.length && crypto.timingSafeEqual(received, expected);
 }
 ```
 
