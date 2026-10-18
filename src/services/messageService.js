@@ -1,5 +1,7 @@
 const { messageModel, inboundMessageModel } = require('../database/models');
-const { startMessageFlow } = require('../events/emitter');
+const { startMessageFlow, cancelMessageFlow } = require('../events/emitter');
+const eventBus = require('../events/bus');
+const { metaError } = require('../utils/metaError');
 const { shouldTriggerError } = require('../utils/errorPatterns');
 const config = require('../config');
 const tenantService = require('./tenantService');
@@ -77,15 +79,51 @@ function webhookContext(tenant) {
     waba_id: tenant.waba_id,
     display_phone_number: tenant.display_phone_number,
     webhook_url: tenant.webhook_url,
-    app_secret: tenant.app_secret
+    app_secret: tenant.app_secret,
+    status_delays: tenant.status_delays,
+    read_probability: tenant.read_probability
   };
 }
 
+const DEFAULT_FORCED_ERROR = 131026;
+
 /**
- * Get message statistics
+ * Force the status of a sent message now (fake-only), cancelling its pending flow
+ * @param {string} phoneNumberId - Phone number that sent the message (path ID)
+ * @param {object} body - { message_id, status, error_code? }
+ * @returns {object} - { response } or { error } in Meta format
  */
-function getMessageStats() {
-  const recent = messageModel.getRecent(100);
+function forceStatus(phoneNumberId, body) {
+  const row = messageModel.findById(body.message_id);
+  if (!row || row.waba_id !== phoneNumberId) {
+    return {
+      error: metaError(100, '(#100) Invalid parameter', {
+        error_data: { messaging_product: 'whatsapp', details: `Message ${body.message_id} was not sent by ${phoneNumberId}` }
+      })
+    };
+  }
+
+  cancelMessageFlow(row.id);
+
+  const tenant = webhookContext(tenantService.tenantForPhone(phoneNumberId));
+  const messageData = {
+    id: row.id,
+    recipient_id: row.recipient_id,
+    type: row.message_type,
+    template_name: row.message_content?.template?.name,
+    tenant
+  };
+  const errorCode = body.status === 'failed' ? (body.error_code || DEFAULT_FORCED_ERROR) : undefined;
+  eventBus.emit(`status:${body.status}`, messageData, tenant.webhook_url, errorCode);
+
+  return { response: { success: true } };
+}
+
+/**
+ * Get message statistics of the messages sent by a phone number
+ */
+function getMessageStats(phoneNumberId) {
+  const recent = messageModel.getRecentBySender(phoneNumberId, 100);
   return {
     total_messages: recent.length,
     by_status: recent.reduce((acc, msg) => {
@@ -100,24 +138,25 @@ function getMessageStats() {
 }
 
 /**
- * Get webhook events by message ID
+ * Get webhook events of a message sent by a phone number
  */
-function getWebhookEventsByMessage(messageId) {
+function getWebhookEventsByMessage(messageId, phoneNumberId) {
   const { webhookEventModel } = require('../database/models');
-  return webhookEventModel.getByMessageId(messageId);
+  return webhookEventModel.getByMessageIdForSender(messageId, phoneNumberId);
 }
 
 /**
- * Get recent webhook events
+ * Get recent webhook events of the messages sent by a phone number
  */
-function getRecentWebhookEvents(limit = 50) {
+function getRecentWebhookEvents(phoneNumberId, limit = 50) {
   const { webhookEventModel } = require('../database/models');
-  return webhookEventModel.getRecent(limit);
+  return webhookEventModel.getRecentForSender(phoneNumberId, limit);
 }
 
 module.exports = {
   isServiceWindowBlocked,
   processMessage,
+  forceStatus,
   getMessageStats,
   getWebhookEventsByMessage,
   getRecentWebhookEvents

@@ -58,6 +58,7 @@ test('spec documents every public endpoint with bearer auth', async () => {
     '/{version}/{wabaId}/messages',
     '/{version}/{wabaId}/messages/stats',
     '/{version}/{wabaId}/simulate/inbound',
+    '/{version}/{wabaId}/simulate/status',
     '/{version}/{wabaId}/webhooks/events'
   ]);
   assert.equal(spec.components.securitySchemes.bearerAuth.scheme, 'bearer');

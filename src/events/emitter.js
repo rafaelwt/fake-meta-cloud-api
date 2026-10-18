@@ -6,6 +6,40 @@ const logger = require('../logger');
 
 const log = logger.child({ component: 'emitter' });
 
+// Pending status timers per message ID (so a forced status can cancel the rest)
+const pendingFlows = new Map();
+
+/**
+ * Schedule a status step of a message flow
+ * @private
+ */
+function scheduleStep(messageId, delay, fn) {
+  const timers = pendingFlows.get(messageId) || new Set();
+  const timer = setTimeout(() => {
+    timers.delete(timer);
+    if (timers.size === 0) pendingFlows.delete(messageId);
+    fn();
+  }, delay);
+  timers.add(timer);
+  pendingFlows.set(messageId, timers);
+}
+
+/**
+ * Cancel the pending status updates of a message
+ * @param {string} messageId - Message ID
+ */
+function cancelMessageFlow(messageId) {
+  for (const timer of pendingFlows.get(messageId) || []) clearTimeout(timer);
+  pendingFlows.delete(messageId);
+}
+
+/**
+ * Cancel every pending status update (shutdown / tests)
+ */
+function cancelAllFlows() {
+  for (const messageId of [...pendingFlows.keys()]) cancelMessageFlow(messageId);
+}
+
 /**
  * Start the message status update flow
  * Schedules events to be emitted on the event bus
@@ -28,29 +62,31 @@ function startMessageFlow(messageData, webhookUrl, errorCode = null) {
  * @private
  */
 function scheduleNormalFlow(messageData, webhookUrl) {
-  const { delays, behavior } = config;
+  // Per-number overrides (tenant), falling back to the global config
+  const delays = messageData.tenant?.status_delays || config.delays;
+  const readProbability = messageData.tenant?.read_probability ?? config.behavior.readProbability;
 
   // 1. SENT (after 0.5-2 seconds)
   const sentDelay = randomDelay(delays.sent.min, delays.sent.max);
-  setTimeout(() => {
+  scheduleStep(messageData.id, sentDelay, () => {
     log.debug({ messageId: messageData.id, delay: sentDelay }, 'Emitting status:sent');
     eventBus.emit('status:sent', messageData, webhookUrl);
-  }, sentDelay);
+  });
 
   // 2. DELIVERED (after 3-5 seconds)
   const deliveredDelay = randomDelay(delays.delivered.min, delays.delivered.max);
-  setTimeout(() => {
+  scheduleStep(messageData.id, deliveredDelay, () => {
     log.debug({ messageId: messageData.id, delay: deliveredDelay }, 'Emitting status:delivered');
     eventBus.emit('status:delivered', messageData, webhookUrl);
-  }, deliveredDelay);
+  });
 
   // 3. READ (after 5-10 seconds, with probability)
-  if (Math.random() <= behavior.readProbability) {
+  if (Math.random() <= readProbability) {
     const readDelay = randomDelay(delays.read.min, delays.read.max);
-    setTimeout(() => {
+    scheduleStep(messageData.id, readDelay, () => {
       log.debug({ messageId: messageData.id, delay: readDelay }, 'Emitting status:read');
       eventBus.emit('status:read', messageData, webhookUrl);
-    }, readDelay);
+    });
   } else {
     log.debug({ messageId: messageData.id }, 'Skipping READ status (probability)');
   }
@@ -62,14 +98,14 @@ function scheduleNormalFlow(messageData, webhookUrl) {
  * @private
  */
 function scheduleErrorFlow(messageData, webhookUrl, errorCode) {
-  const { delays } = config;
+  const delays = messageData.tenant?.status_delays || config.delays;
 
   // FAILED (after 0.5-2 seconds, when sent would have arrived)
   const failedDelay = randomDelay(delays.sent.min, delays.sent.max);
-  setTimeout(() => {
+  scheduleStep(messageData.id, failedDelay, () => {
     log.debug({ messageId: messageData.id, errorCode, delay: failedDelay }, 'Emitting status:failed');
     eventBus.emit('status:failed', messageData, webhookUrl, errorCode);
-  }, failedDelay);
+  });
 }
 
 /**
@@ -170,5 +206,7 @@ function senderOf(messageData) {
 
 module.exports = {
   startMessageFlow,
+  cancelMessageFlow,
+  cancelAllFlows,
   buildWebhookPayload
 };

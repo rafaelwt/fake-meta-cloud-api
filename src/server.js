@@ -10,6 +10,7 @@ const { createAuthMiddleware } = require('./middleware/auth.middleware');
 const tenantService = require('./services/tenantService');
 const { metaError } = require('./utils/metaError');
 const { registerDocs } = require('./plugins/docs');
+const { cancelAllFlows } = require('./events/emitter');
 
 // Register event listeners (auto-registers on require)
 require('./events/listeners/sentListener');
@@ -75,6 +76,7 @@ function createServer() {
         stats: 'GET /v26.0/:wabaId/messages/stats',
         webhook_events: 'GET /v26.0/:wabaId/webhooks/events',
         simulate_inbound: 'POST /v26.0/:wabaId/simulate/inbound',
+        simulate_status: 'POST /v26.0/:phoneNumberId/simulate/status',
         phone_number: 'GET /v26.0/:phoneNumberId',
         templates: 'GET|POST /v26.0/:wabaId/message_templates',
         upload_session: 'POST /v26.0/:appId/uploads',
@@ -120,6 +122,7 @@ function createServer() {
   // Graceful shutdown
   app.addHook('onClose', async (instance) => {
     logger.info('Closing server...');
+    cancelAllFlows();
     closeDatabase(db, logger);
   });
 

@@ -1,6 +1,7 @@
 const { resetModel } = require('../database/models');
 const tenantService = require('./tenantService');
 const templateService = require('./templateService');
+const { cancelMessageFlow } = require('../events/emitter');
 const logger = require('../logger');
 
 /**
@@ -10,14 +11,21 @@ const logger = require('../logger');
  * @returns {object} - { success, deleted }
  */
 function reset(target) {
-  let deleted;
+  const phoneNumberIds = target.phone_number_id
+    ? [target.phone_number_id]
+    : tenantService.phoneNumbersOfWaba(target.waba_id);
 
+  // Pending statuses of deleted messages must not fire (no stray webhooks, no FK errors)
+  for (const messageId of resetModel.messageIdsOf(phoneNumberIds)) {
+    cancelMessageFlow(messageId);
+  }
+
+  let deleted;
   if (target.phone_number_id) {
-    deleted = resetModel.resetPhones([target.phone_number_id]);
+    deleted = resetModel.resetPhones(phoneNumberIds);
   } else {
-    const wabaId = target.waba_id;
-    deleted = resetModel.resetWaba(wabaId, tenantService.phoneNumbersOfWaba(wabaId));
-    templateService.forgetSeeded(wabaId);
+    deleted = resetModel.resetWaba(target.waba_id, phoneNumberIds);
+    templateService.forgetSeeded(target.waba_id);
   }
 
   logger.info({ target, deleted }, 'Test data reset');

@@ -86,10 +86,22 @@ async function simulateInbound(request, reply) {
 }
 
 /**
+ * Force the status of a sent message (fake-only)
+ */
+async function simulateStatus(request, reply) {
+  const result = messageService.forceStatus(request.params.wabaId, request.body);
+  if (result.error) return reply.status(400).send(result.error);
+
+  request.log.info({ messageId: request.body.message_id, status: request.body.status }, 'Message status forced');
+
+  return result.response;
+}
+
+/**
  * Get message statistics
  */
 async function getStats(request, reply) {
-  return messageService.getMessageStats();
+  return messageService.getMessageStats(request.params.wabaId);
 }
 
 /**
@@ -99,17 +111,18 @@ async function getWebhookEvents(request, reply) {
   const { messageId } = request.query;
 
   if (messageId) {
-    const events = messageService.getWebhookEventsByMessage(messageId);
+    const events = messageService.getWebhookEventsByMessage(messageId, request.params.wabaId);
     return { message_id: messageId, events };
   }
 
-  const events = messageService.getRecentWebhookEvents();
+  const events = messageService.getRecentWebhookEvents(request.params.wabaId);
   return { events };
 }
 
 module.exports = {
   sendMessage,
   simulateInbound,
+  simulateStatus,
   getStats,
   getWebhookEvents
 };

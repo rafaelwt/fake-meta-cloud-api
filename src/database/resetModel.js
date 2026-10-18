@@ -23,6 +23,10 @@ class ResetModel {
         DELETE FROM inbound_messages WHERE waba_id = ?
       `),
 
+      selectMessageIds: db.prepare(`
+        SELECT id FROM messages WHERE waba_id = ?
+      `),
+
       deleteTemplates: db.prepare(`
         DELETE FROM message_templates WHERE waba_id = ?
       `)
@@ -42,6 +46,15 @@ class ResetModel {
       ...this.resetPhonesTx(phoneNumberIds),
       templates: this.stmts.deleteTemplates.run(wabaId).changes
     }));
+  }
+
+  /**
+   * IDs of the messages sent by phone numbers
+   * @param {string[]} phoneNumberIds - Phone number IDs
+   * @returns {string[]} - Message IDs
+   */
+  messageIdsOf(phoneNumberIds) {
+    return phoneNumberIds.flatMap(id => this.stmts.selectMessageIds.all(id).map(row => row.id));
   }
 
   /**

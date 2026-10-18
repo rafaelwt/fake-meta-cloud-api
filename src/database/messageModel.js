@@ -37,6 +37,13 @@ class MessageModel {
         LIMIT ?
       `),
 
+      findRecentBySender: db.prepare(`
+        SELECT * FROM messages
+        WHERE waba_id = ?
+        ORDER BY created_at DESC
+        LIMIT ?
+      `),
+
       findByRecipient: db.prepare(`
         SELECT * FROM messages
         WHERE recipient_id = ?
@@ -110,6 +117,21 @@ class MessageModel {
     const now = Math.floor(Date.now() / 1000);
     const result = this.stmts.updateError.run(errorCode, errorMessage, now, id);
     return { id, status: 'failed', error_code: errorCode, error_message: errorMessage, changes: result.changes };
+  }
+
+  /**
+   * Get recent messages sent by a phone number
+   * @param {string} phoneNumberId - Phone number ID from the path
+   * @param {number} limit - Number of messages to retrieve
+   * @returns {Array} - Array of messages
+   */
+  getRecentBySender(phoneNumberId, limit = 50) {
+    return this.stmts.findRecentBySender.all(phoneNumberId, limit).map(msg => {
+      if (msg.message_content) {
+        msg.message_content = JSON.parse(msg.message_content);
+      }
+      return msg;
+    });
   }
 
   /**

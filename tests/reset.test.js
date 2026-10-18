@@ -134,3 +134,48 @@ test('reset needs exactly one of phone_number_id or waba_id', async () => {
     assert.equal(res.json().error.code, 100);
   }
 });
+
+test('reset during a pending status flow cancels it and keeps the server alive', async () => {
+  const http = require('node:http');
+  const hooks = [];
+  const receiver = http.createServer((req, res) => {
+    let raw = '';
+    req.on('data', chunk => { raw += chunk; });
+    req.on('end', () => { hooks.push(JSON.parse(raw)); res.end('ok'); });
+  });
+  await new Promise(resolve => receiver.listen(0, '127.0.0.1', resolve));
+
+  await app.inject({
+    method: 'POST', url: '/fake/tenants', headers: admin,
+    payload: {
+      phone_number_id: '555010', waba_id: '777010', access_token: 'token_r',
+      webhook_url: `http://127.0.0.1:${receiver.address().port}/`,
+      status_delays: { sent: { min: 60, max: 60 }, delivered: { min: 80, max: 80 }, read: { min: 90, max: 90 } },
+      read_probability: 1
+    }
+  });
+
+  const sent = await app.inject({
+    method: 'POST', url: '/v26.0/555010/messages', headers: { authorization: 'Bearer token_r' },
+    payload: { messaging_product: 'whatsapp', to: '+5491100000003', type: 'text', text: { body: 'hi' } }
+  });
+  assert.equal(sent.statusCode, 200);
+
+  const res = await reset({ phone_number_id: '555010' });
+  assert.equal(res.statusCode, 200);
+  await wait(200);
+  receiver.close();
+
+  assert.equal(hooks.length, 0, 'statuses were sent after the reset');
+  const health = await app.inject({ method: 'GET', url: '/health' });
+  assert.equal(health.statusCode, 200);
+});
+
+test('reset by an unregistered WABA ID also clears messages sent from that ID', async () => {
+  await seedActivity('888888', 'default_token');
+  assert.equal(count('messages', 'waba_id', '888888'), 1);
+
+  const res = await reset({ waba_id: '888888' });
+  assert.equal(res.statusCode, 200);
+  assert.equal(count('messages', 'waba_id', '888888'), 0);
+});

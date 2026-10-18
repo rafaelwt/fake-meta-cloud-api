@@ -20,6 +20,8 @@ function defaultTenant() {
     access_token: config.auth.accessToken,
     webhook_url: config.webhook.url,
     app_secret: config.meta.appSecret,
+    status_delays: config.delays,
+    read_probability: config.behavior.readProbability,
     is_default: true
   };
 }
@@ -36,6 +38,8 @@ function withDefaults(row) {
     quality_rating: row.quality_rating || fallback.quality_rating,
     webhook_url: row.webhook_url || fallback.webhook_url,
     app_secret: row.app_secret || fallback.app_secret,
+    status_delays: { ...fallback.status_delays, ...row.settings.status_delays },
+    read_probability: row.settings.read_probability ?? fallback.read_probability,
     is_default: false
   };
 }
@@ -129,12 +133,14 @@ function templateWabaFor(phoneNumberId) {
 }
 
 /**
- * Phone number IDs that belong to a WABA (registered numbers, plus PHONE_NUMBER_ID for WABA_ID)
+ * Phone number IDs that belong to a WABA (registered numbers, plus PHONE_NUMBER_ID for WABA_ID);
+ * a WABA nobody owns is an unregistered ID used as its own WABA (see templateWabaFor)
  * @param {string} wabaId - WhatsApp Business Account ID
  * @returns {string[]} - Phone number IDs
  */
 function phoneNumbersOfWaba(wabaId) {
-  return membersOfWaba(wabaId).map(t => t.phone_number_id);
+  const members = membersOfWaba(wabaId).map(t => t.phone_number_id);
+  return members.length ? members : [wabaId];
 }
 
 /**
@@ -149,6 +155,8 @@ function publicView(row) {
     quality_rating: row.quality_rating,
     webhook_url: row.webhook_url,
     has_app_secret: Boolean(row.app_secret),
+    status_delays: row.settings.status_delays || null,
+    read_probability: row.settings.read_probability ?? null,
     created_at: row.created_at,
     updated_at: row.updated_at
   };
@@ -160,7 +168,12 @@ function publicView(row) {
  * @returns {{created: boolean, tenant: object}} - Public view of the stored tenant
  */
 function registerTenant(body) {
-  const created = tenantModel.upsert(body);
+  const { status_delays: statusDelays, read_probability: readProbability, ...tenant } = body;
+  const settings = {};
+  if (statusDelays) settings.status_delays = statusDelays;
+  if (readProbability !== undefined) settings.read_probability = readProbability;
+
+  const created = tenantModel.upsert({ ...tenant, settings });
   return { created, tenant: publicView(tenantModel.findByPhone(body.phone_number_id)) };
 }
 
