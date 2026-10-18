@@ -1,4 +1,7 @@
-require('dotenv').config({ quiet: true });
+// Tests configure process.env themselves; a local .env must not leak into them
+if (!process.env.NODE_TEST_CONTEXT) {
+  require('dotenv').config({ quiet: true });
+}
 const { resolveLogDir } = require('../utils/logDir');
 
 /**
