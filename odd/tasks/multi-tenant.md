@@ -17,7 +17,7 @@ Branch: feat/multi-tenant (stacked on feat/sync-errors-template-validation) · D
 - [x] T1 · S1, S5 · inline · tenants table/model/service + admin endpoints `/fake/tenants` (ADMIN_TOKEN; disabled when unset)
 - [x] T2 · S4 · inline · route-aware auth: phone routes → tenant token; WABA routes → token of any tenant of that WABA; uploads → any known token; unregistered ids keep API_ACCESS_TOKEN · Risk item 2
 - [x] T3 · S2, S3 · inline · tenant-aware webhooks (status, inbound, template status): URL, signature secret, metadata, entry id; phone node + template validation use the tenant
-- [ ] T4 · S6 · inline · README, .env.example; independent verifier (item 2); report to bulk-whatsapp-app
+- [x] T4 · S6 · inline · README, .env.example; independent verifier (item 2); report to bulk-whatsapp-app
 
 ## Log
 
@@ -25,3 +25,4 @@ Branch: feat/multi-tenant (stacked on feat/sync-errors-template-validation) · D
 - L2: Design: the default tenant is virtual (built from .env, not stored) and keeps today's output byte for byte for unregistered ids (metadata uses PHONE_NUMBER_ID/DISPLAY_PHONE_NUMBER, webhooks go to WEBHOOK_URL with APP_SECRET). A registered phone_number_id only accepts its own access_token. Admin API answers 403 unless ADMIN_TOKEN is set; responses never echo access_token/app_secret.
 - L3: RED 12/14 → GREEN. Found the repo .env (now with sandbox vars) leaking into tests → config skips dotenv under node --test (c2730b4, tests/envIsolation.test.js). Suite 124/124.
 - L4: Known gaps (documented): stats/webhooks events not filtered per tenant; service window keyed by sender only (scoping it would change existing single-tenant behavior across path ids).
+- L5: Independent verifier: S2-S5 PASS (26-case auth matrix, persistence across processes, no secret leaks), item 3 differential identical with no tenants. Blocker: a number registered in WABA_ID locked API_ACCESS_TOKEN out of that WABA and dropped WEBHOOK_URL from its template webhooks. Fixed with membersOfWaba (default tenant counts as a member of WABA_ID while PHONE_NUMBER_ID is unregistered); regression test added; suite 132/132. Scratch removed.

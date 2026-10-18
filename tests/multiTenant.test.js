@@ -259,6 +259,38 @@ test('template status webhooks go to the tenants of that WABA', async () => {
   assert.equal(send.statusCode, 200, send.body);
 });
 
+test('a number registered in WABA_ID does not lock the .env number out of its WABA', async () => {
+  const created = await registerTenant({
+    phone_number_id: '555009', waba_id: '200200', access_token: 'token_z', webhook_url: tenantUrl, app_secret: 'secret_z'
+  });
+  assert.equal(created.statusCode, 201);
+
+  const list = token => app.inject({
+    method: 'GET', url: '/v26.0/200200/message_templates', headers: { authorization: `Bearer ${token}` }
+  });
+  assert.equal((await list('default_token')).statusCode, 200);
+  assert.equal((await list('token_z')).statusCode, 200);
+
+  const template = await app.inject({
+    method: 'POST',
+    url: '/v26.0/200200/message_templates',
+    headers: { authorization: 'Bearer default_token' },
+    payload: { name: 'shared_waba', language: 'en_US', category: 'UTILITY', components: [{ type: 'BODY', text: 'Hi' }] }
+  });
+  assert.equal(template.statusCode, 200);
+  await wait(150);
+
+  const templateId = Number(template.json().id);
+  const toDefault = defaultHook.received.find(r => r.body.entry[0].changes[0].value.message_template_id === templateId);
+  const toTenant = tenantHook.received.find(r => r.body.entry[0].changes[0].value.message_template_id === templateId);
+  assert.ok(toDefault, 'WEBHOOK_URL lost template updates for WABA_ID');
+  assert.equal(toDefault.signature, sign(toDefault.raw, 'default_secret'));
+  assert.ok(toTenant);
+  assert.equal(toTenant.signature, sign(toTenant.raw, 'secret_z'));
+
+  await app.inject({ method: 'DELETE', url: '/fake/tenants/555009', headers: admin });
+});
+
 test('re-registering updates the tenant and deleting restores the default', async () => {
   const updated = await registerTenant({ ...tenantA, access_token: 'token_a2', webhook_url: tenantUrl });
   assert.equal(updated.statusCode, 200);

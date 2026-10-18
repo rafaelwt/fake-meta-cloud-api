@@ -60,13 +60,27 @@ function tenantsForWaba(wabaId) {
 }
 
 /**
+ * Every number of a WABA: its registered tenants, plus the default tenant
+ * when it is WABA_ID and PHONE_NUMBER_ID is not registered
+ * @param {string} wabaId - WhatsApp Business Account ID
+ * @returns {Array} - Tenants (empty for a WABA nobody owns)
+ */
+function membersOfWaba(wabaId) {
+  const members = tenantsForWaba(wabaId);
+  if (wabaId === config.meta.wabaId && !tenantModel.findByPhone(config.meta.phoneNumberId)) {
+    members.push(defaultTenant());
+  }
+  return members;
+}
+
+/**
  * Webhook destinations for WABA-level events (e.g. template status updates)
  * One per distinct webhook URL + secret; the default tenant when none is registered
  * @param {string} wabaId - WhatsApp Business Account ID
  * @returns {Array<{webhook_url: string, app_secret: string}>}
  */
 function webhookTargetsForWaba(wabaId) {
-  const tenants = tenantsForWaba(wabaId);
+  const tenants = membersOfWaba(wabaId);
   const targets = new Map();
   for (const tenant of tenants.length ? tenants : [defaultTenant()]) {
     targets.set(`${tenant.webhook_url}|${tenant.app_secret}`, {
@@ -94,7 +108,7 @@ function acceptedTokens(scope, id) {
   }
 
   if (scope === 'waba') {
-    const tenants = tenantsForWaba(id);
+    const tenants = membersOfWaba(id);
     return tenants.length ? tenants.map(t => t.access_token) : [config.auth.accessToken];
   }
 
@@ -112,6 +126,15 @@ function templateWabaFor(phoneNumberId) {
   const row = tenantModel.findByPhone(phoneNumberId);
   if (row) return row.waba_id;
   return phoneNumberId === config.meta.phoneNumberId ? config.meta.wabaId : phoneNumberId;
+}
+
+/**
+ * Phone number IDs that belong to a WABA (registered numbers, plus PHONE_NUMBER_ID for WABA_ID)
+ * @param {string} wabaId - WhatsApp Business Account ID
+ * @returns {string[]} - Phone number IDs
+ */
+function phoneNumbersOfWaba(wabaId) {
+  return membersOfWaba(wabaId).map(t => t.phone_number_id);
 }
 
 /**
@@ -165,6 +188,7 @@ module.exports = {
   webhookTargetsForWaba,
   acceptedTokens,
   templateWabaFor,
+  phoneNumbersOfWaba,
   registerTenant,
   listTenants,
   removeTenant
