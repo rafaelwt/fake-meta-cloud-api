@@ -35,11 +35,22 @@ function parseErrorPatterns(patternsString) {
  * @returns {number|null} - Error code if match found, null otherwise
  */
 function matchErrorPattern(phoneNumber, patterns) {
+  const match = matchPattern(phoneNumber, patterns);
+  return match ? match.value : null;
+}
+
+/**
+ * Find the first pattern contained in a phone number
+ * @param {string} phoneNumber - Phone number to check (with or without +)
+ * @param {Map} patterns - Map of patterns to any value
+ * @returns {{pattern: string, value: *}|null} - Matched entry or null
+ */
+function matchPattern(phoneNumber, patterns) {
   const normalizedNumber = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`;
 
-  for (const [pattern, errorCode] of patterns.entries()) {
+  for (const [pattern, value] of patterns.entries()) {
     if (normalizedNumber.includes(pattern) || phoneNumber.includes(pattern.replace('+', ''))) {
-      return errorCode;
+      return { pattern, value };
     }
   }
 
@@ -60,5 +71,6 @@ function shouldTriggerError(phoneNumber, patternsConfig) {
 module.exports = {
   parseErrorPatterns,
   matchErrorPattern,
+  matchPattern,
   shouldTriggerError
 };

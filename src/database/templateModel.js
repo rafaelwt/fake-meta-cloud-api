@@ -30,6 +30,10 @@ class TemplateModel {
         SELECT * FROM message_templates WHERE id = ?
       `),
 
+      findByName: db.prepare(`
+        SELECT * FROM message_templates WHERE waba_id = ? AND name = ? AND language = ?
+      `),
+
       findByWaba: db.prepare(`
         SELECT * FROM message_templates WHERE waba_id = ?
         ORDER BY created_at, rowid
@@ -86,6 +90,17 @@ class TemplateModel {
    */
   findById(id) {
     return parse(this.stmts.findById.get(id));
+  }
+
+  /**
+   * Find a template by WABA, name and language
+   * @param {string} wabaId - WhatsApp Business Account ID
+   * @param {string} name - Template name
+   * @param {string} language - Language code
+   * @returns {object|undefined} - Template with parsed components
+   */
+  findByName(wabaId, name, language) {
+    return parse(this.stmts.findByName.get(wabaId, name, language));
   }
 
   /**

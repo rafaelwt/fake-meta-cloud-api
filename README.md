@@ -98,9 +98,14 @@ DELAY_READ_MAX=10000
 # Behavior
 READ_PROBABILITY=0.7  # 70% chance of read status
 SERVICE_WINDOW_ENFORCED=false  # true: free-form messages need an inbound message in the last 24h
+TEMPLATE_VALIDATION_ENFORCED=false  # true: template sends are checked against stored templates
 
 # Error Patterns (phone:error_code)
 ERROR_PATTERNS=+99999:131026,+88888:131047,+77777:131031
+
+# Synchronous errors on POST messages (PATTERN:CODE, xN = fail N times then accept)
+SYNC_ERROR_PATTERNS=+11111:130429,+55555:503x2
+RESPONSE_DELAY_PATTERNS=+44444:3000
 
 # Template pricing categories (template_name:category, trailing * = prefix)
 TEMPLATE_CATEGORIES=otp_*:authentication,order_update:utility
@@ -438,7 +443,21 @@ with `rejected_reason: "INVALID_FORMAT"` when its name starts with
 A name + language that already exists in the same WABA returns HTTP 400 with
 `code: 100`, `error_subcode: 2388024`.
 
-Sending a template message does not check this list; any template name is accepted.
+By default, sending a template message does not check this list and any template name
+is accepted. With `TEMPLATE_VALIDATION_ENFORCED=true`, `POST messages` with `type: template`
+is validated against the stored templates of the WABA (when the path ID is `PHONE_NUMBER_ID`
+it uses `WABA_ID`; any other path ID is treated as its own WABA):
+
+| Case | HTTP | Code |
+|------|------|------|
+| Name + language does not exist, or is not `APPROVED` | 404 | `132001` |
+| Header / body parameter count differs from the template variables | 400 | `132000` |
+| `sub_type: url` button parameters do not match the dynamic URL buttons and OTP (`COPY_CODE` / `ONE_TAP`) buttons | 400 | `132000` |
+| `NAMED` template: `parameter_name` values differ from the template variables | 400 | `132000` |
+| IMAGE / VIDEO / DOCUMENT header without a parameter of that type with `link` or `id` | 400 | `132012` |
+| LOCATION header without a `location` parameter with `latitude` and `longitude` | 400 | `132012` |
+
+Each error carries `error_data.details`, e.g. `body: number of localizable_params (0) does not match the expected number of params (1)`.
 
 #### 12. Resumable Upload (template header samples)
 
@@ -627,6 +646,31 @@ curl -X POST http://localhost:3000/v26.0/123456789012345/messages \
   }'
 ```
 
+These numbers are accepted (`200`) and fail later through a `failed` status webhook.
+
+### Synchronous Errors
+
+To test retries, `SYNC_ERROR_PATTERNS` makes the `POST messages` response itself fail.
+Nothing is stored and no webhook is sent. A `xN` suffix fails the first N attempts per
+recipient, accepts the next one, then starts over.
+
+```bash
+SYNC_ERROR_PATTERNS=+11111:130429,+22222:131056,+33333:500,+66666:503,+55555:503x2
+RESPONSE_DELAY_PATTERNS=+44444:3000   # answer after 3000 ms (timeouts / slow responses)
+```
+
+| Code | HTTP | Response `error` |
+|------|------|------------------|
+| `130429` | 429 | code 130429, `(#130429) Rate limit hit` |
+| `131056` | 400 | code 131056, pair rate limit hit |
+| `131000` | 500 | code 131000, `is_transient: true` |
+| `500` | 500 | code 1, `An unknown error has occurred.`, `is_transient: true` |
+| `503` | 503 | code 2, `Service temporarily unavailable`, `is_transient: true` |
+| any other code | 400 | that code, e.g. `133016` or `131047` |
+
+With `+55555:503x2`, three sends to `+5495555500` answer `503`, `503`, `200`.
+Counters live in memory and reset when the server restarts.
+
 ## Project Structure
 
 ```
@@ -668,6 +712,7 @@ fake-meta-cloud-api/
 │   │   ├── webhookService.js         # Signed HTTP webhook delivery
 │   │   ├── phoneNumberService.js     # Phone number node
 │   │   ├── templateService.js        # Templates, seeds, review lifecycle
+│   │   ├── templateValidator.js      # Template send validation (132001/132000/132012)
 │   │   └── uploadService.js          # Resumable Upload API
 │   ├── utils/
 │   │   ├── delays.js                 # Random delay helpers
@@ -675,6 +720,7 @@ fake-meta-cloud-api/
 │   │   ├── fields.js                 # Graph `fields` parameter
 │   │   ├── idGenerator.js            # wamid generation
 │   │   ├── signature.js              # X-Hub-Signature-256
+│   │   ├── syncErrors.js             # Synchronous error / delay patterns
 │   │   └── templateCategories.js     # Template pricing categories
 │   ├── logger.js                     # Pino logger
 │   └── server.js                     # Fastify app

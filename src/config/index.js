@@ -59,12 +59,18 @@ const config = {
   behavior: {
     readProbability: parseFloat(process.env.READ_PROBABILITY || '0.7'),
     // Reject free-form messages outside the 24h customer service window (131047)
-    serviceWindowEnforced: process.env.SERVICE_WINDOW_ENFORCED === 'true'
+    serviceWindowEnforced: process.env.SERVICE_WINDOW_ENFORCED === 'true',
+    // Validate template messages against stored templates (132001 / 132000 / 132012)
+    templateValidationEnforced: process.env.TEMPLATE_VALIDATION_ENFORCED === 'true'
   },
 
   // Error simulation
   errors: {
-    patterns: process.env.ERROR_PATTERNS || '+99999:131026,+88888:131047,+77777:131031'
+    patterns: process.env.ERROR_PATTERNS || '+99999:131026,+88888:131047,+77777:131031',
+    // Fail the POST messages response itself (PATTERN:CODE, optional xN = fail N times then accept)
+    syncPatterns: process.env.SYNC_ERROR_PATTERNS || '',
+    // Answer POST messages after a delay (PATTERN:MS)
+    responseDelayPatterns: process.env.RESPONSE_DELAY_PATTERNS || ''
   },
 
   // Template pricing categories
