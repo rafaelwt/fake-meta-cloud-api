@@ -47,6 +47,7 @@ test('spec documents every public endpoint with bearer auth', async () => {
   const spec = await getSpec();
 
   assert.deepEqual(Object.keys(spec.paths).sort(), [
+    '/fake/reset',
     '/fake/tenants',
     '/fake/tenants/{phoneNumberId}',
     '/health',

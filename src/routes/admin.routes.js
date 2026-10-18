@@ -36,6 +36,27 @@ async function adminRoutes(fastify, options) {
     onRequest
   }, handlers.listTenants);
 
+  fastify.post('/fake/reset', {
+    schema: {
+      tags: ['Admin'],
+      summary: 'Delete test data of a phone number or WABA',
+      description: 'phone_number_id: deletes its messages, their webhook events and inbound messages. waba_id: also deletes the WABA templates (seeds come back on next use) and the data of its numbers. The tenant registry is kept.',
+      security,
+      body: {
+        type: 'object',
+        oneOf: [
+          { required: ['phone_number_id'], not: { required: ['waba_id'] } },
+          { required: ['waba_id'], not: { required: ['phone_number_id'] } }
+        ],
+        properties: {
+          phone_number_id: { type: 'string', pattern: '^\\d+$' },
+          waba_id: { type: 'string', pattern: '^\\d+$' }
+        }
+      }
+    },
+    onRequest
+  }, handlers.reset);
+
   fastify.delete('/fake/tenants/:phoneNumberId', {
     schema: {
       tags: ['Admin'],

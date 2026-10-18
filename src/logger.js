@@ -30,6 +30,11 @@ const streams = [
   { level: 'error', stream: errorStream }
 ];
 
+// JSON logs on stdout (containers: docker logs)
+if (config.logging.stdout) {
+  streams.push({ stream: process.stdout });
+}
+
 // Add console output in development
 if (config.logging.pretty && config.server.env === 'development') {
   streams.push({

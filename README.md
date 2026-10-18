@@ -139,6 +139,44 @@ pnpm start
 pnpm dev
 ```
 
+### Docker (sandbox deploy)
+
+```bash
+cp .env.example .env    # set API_ACCESS_TOKEN, APP_SECRET, ADMIN_TOKEN, WEBHOOK_URL...
+docker compose up -d --build
+docker compose ps       # healthy once GET /ready answers 200
+docker compose logs -f  # JSON logs (LOG_STDOUT=true)
+```
+
+- The API listens on `http://localhost:3001`. Change it with `FAKE_META_PORT`.
+- Data (SQLite + log files) lives in the `fake-meta-data` volume at `/data`, so messages,
+  templates and registered numbers survive restarts and image upgrades.
+- Compose sets the container values (`PORT=3000`, `NODE_ENV=production`, `DB_PATH`, `LOG_DIR`,
+  `LOG_STDOUT`); everything else comes from `.env`.
+- To reach a service running on the host, use `host.docker.internal` in `WEBHOOK_URL` or a
+  tenant `webhook_url`, e.g. `http://host.docker.internal:3000/webhooks/whatsapp`.
+- `/docs` is off in production; set `DOCS_ENABLED=true` to expose it.
+- The image also runs alone: `docker build -t fake-meta-cloud-api .` then
+  `docker run -p 3001:3000 -v fake-meta-data:/data --env-file .env fake-meta-cloud-api`.
+
+### Reset Test Data (fake-only)
+
+`POST /fake/reset` (requires `ADMIN_TOKEN`) deletes test data between runs. It takes exactly
+one of `phone_number_id` or `waba_id`:
+
+```bash
+# Messages, their webhook events and inbound messages of one number
+curl -X POST http://localhost:3001/fake/reset -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" -d '{"phone_number_id": "555001"}'
+
+# Templates of a WABA (seeds come back on next use) + the data of all its numbers
+curl -X POST http://localhost:3001/fake/reset -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" -d '{"waba_id": "777001"}'
+# {"success":true,"deleted":{"messages":3,"webhook_events":7,"inbound_messages":1,"templates":5}}
+```
+
+The tenant registry is kept. `PHONE_NUMBER_ID` counts as a number of `WABA_ID`.
+
 ### API Reference
 
 In development (`NODE_ENV=development`, the default) the server exposes an
@@ -741,6 +779,7 @@ fake-meta-cloud-api/
 │   │   ├── templateSeeds.js          # Approved seed templates
 │   │   ├── uploadModel.js            # Upload sessions
 │   │   ├── tenantModel.js            # Registered phone numbers
+│   │   ├── resetModel.js             # Test data reset
 │   │   └── schema.sql                # Database schema
 │   ├── events/
 │   │   ├── bus.js                    # EventEmitter bus
@@ -766,7 +805,8 @@ fake-meta-cloud-api/
 │   │   ├── templateService.js        # Templates, seeds, review lifecycle
 │   │   ├── templateValidator.js      # Template send validation (132001/132000/132012)
 │   │   ├── uploadService.js          # Resumable Upload API
-│   │   └── tenantService.js          # Tenants, per-route tokens, webhook targets
+│   │   ├── tenantService.js          # Tenants, per-route tokens, webhook targets
+│   │   └── resetService.js           # Fake-only test data reset
 │   ├── utils/
 │   │   ├── delays.js                 # Random delay helpers
 │   │   ├── errorPatterns.js          # Pattern matching
@@ -785,6 +825,8 @@ fake-meta-cloud-api/
 ├── .env                              # Your config (not in git)
 ├── .env.example                      # Config template
 ├── index.js                          # Entry point
+├── Dockerfile                        # Sandbox image (healthcheck on /ready)
+├── docker-compose.yml                # Sandbox deploy with a data volume
 ├── package.json
 ├── pnpm-workspace.yaml
 └── README.md
@@ -823,6 +865,9 @@ LOG_LEVEL=debug pnpm dev
 
 # Disable pretty printing
 LOG_PRETTY=false pnpm start
+
+# Also write JSON logs to stdout (the Docker image sets it)
+LOG_STDOUT=true pnpm start
 ```
 
 Log files (`combined.log`, `info.log`, `error.log`) go to `./logs` by default.

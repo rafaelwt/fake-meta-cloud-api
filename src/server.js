@@ -80,6 +80,7 @@ function createServer() {
         upload_session: 'POST /v26.0/:appId/uploads',
         upload_bytes: 'POST /v26.0/upload:<id>',
         tenants: 'GET|POST /fake/tenants, DELETE /fake/tenants/:phoneNumberId (ADMIN_TOKEN)',
+        reset: 'POST /fake/reset (ADMIN_TOKEN)',
         docs: 'GET /docs (development)'
       },
       documentation: 'See README.md for usage examples'

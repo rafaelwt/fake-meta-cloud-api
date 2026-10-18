@@ -1,4 +1,5 @@
 const tenantService = require('../services/tenantService');
+const resetService = require('../services/resetService');
 const { metaError } = require('../utils/metaError');
 
 /**
@@ -34,8 +35,16 @@ async function removeTenant(request, reply) {
   return { success: true };
 }
 
+/**
+ * POST /fake/reset - delete test data of a phone number or WABA
+ */
+async function reset(request, reply) {
+  return resetService.reset(request.body);
+}
+
 module.exports = {
   registerTenant,
   listTenants,
-  removeTenant
+  removeTenant,
+  reset
 };

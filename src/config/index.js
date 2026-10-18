@@ -100,7 +100,9 @@ const config = {
   logging: {
     dir: resolveLogDir(process.env),
     level: process.env.LOG_LEVEL || 'info',
-    pretty: process.env.LOG_PRETTY === 'true'
+    pretty: process.env.LOG_PRETTY === 'true',
+    // Also write JSON logs to stdout (used by the Docker image)
+    stdout: process.env.LOG_STDOUT === 'true'
   }
 };
 

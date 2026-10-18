@@ -36,6 +36,14 @@ function ensureSeeded(wabaId) {
 }
 
 /**
+ * Forget that a WABA was seeded, so its seeds are inserted again on next use
+ * @param {string} wabaId - WhatsApp Business Account ID
+ */
+function forgetSeeded(wabaId) {
+  seededWabas.delete(wabaId);
+}
+
+/**
  * List templates of a WABA with Graph cursor pagination
  * @param {string} wabaId - WhatsApp Business Account ID
  * @param {object} query - limit, after, fields and optional name/status/category/language filters
@@ -202,5 +210,6 @@ module.exports = {
   listTemplates,
   createTemplate,
   findTemplate,
+  forgetSeeded,
   reviewDueTemplates
 };

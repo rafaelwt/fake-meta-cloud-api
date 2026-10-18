@@ -1,0 +1,28 @@
+# Fake Meta Cloud API sandbox
+# Usage: docker compose up -d --build   (config from .env, data in the fake-meta-data volume)
+services:
+  fake-meta-api:
+    build: .
+    image: fake-meta-cloud-api:local
+    ports:
+      - "${FAKE_META_PORT:-3001}:3000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Container-side values; everything else comes from .env
+      PORT: 3000
+      HOST: 0.0.0.0
+      NODE_ENV: production
+      DB_PATH: /data/fake-meta-api.db
+      LOG_DIR: /data/logs
+      LOG_STDOUT: "true"
+    extra_hosts:
+      # Lets WEBHOOK_URL / tenant webhook_url reach services on the host
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - fake-meta-data:/data
+    restart: unless-stopped
+
+volumes:
+  fake-meta-data:
