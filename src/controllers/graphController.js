@@ -37,7 +37,11 @@ async function postNode(request, reply) {
 
   const offsetHeader = request.headers.file_offset;
   const fileOffset = offsetHeader === undefined ? 0 : Number(offsetHeader);
-  const bytes = Buffer.isBuffer(request.body) ? request.body : Buffer.alloc(0);
+  // A JSON or form body was parsed by another content-type parser: not raw file bytes
+  if (request.body !== undefined && !Buffer.isBuffer(request.body)) {
+    return reply.status(400).send(metaError(100, '(#100) The request body must be the raw file bytes'));
+  }
+  const bytes = request.body || Buffer.alloc(0);
 
   return sendResult(reply, uploadService.receiveBytes(nodeId, fileOffset, bytes));
 }

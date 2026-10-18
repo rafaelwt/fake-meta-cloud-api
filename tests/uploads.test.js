@@ -109,6 +109,15 @@ test('unknown session or wrong offset returns code 100', async () => {
   assert.equal(badOffset.json().error.code, 100);
 });
 
+test('a JSON body is rejected instead of counted as zero bytes', async () => {
+  const { id } = (await startSession(5)).json();
+  const res = await app.inject({
+    method: 'POST', url: `/v26.0/${id}`, headers: { ...auth, file_offset: '0' }, payload: { not: 'bytes' }
+  });
+  assert.equal(res.statusCode, 400);
+  assert.equal(res.json().error.code, 100);
+});
+
 test('POST to an unknown node keeps the Graph unknown-path error', async () => {
   const res = await app.inject({ method: 'POST', url: '/v26.0/12345', headers: auth, payload: {} });
   assert.equal(res.statusCode, 400);
