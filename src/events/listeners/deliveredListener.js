@@ -14,7 +14,7 @@ eventBus.on('status:delivered', async (messageData, webhookUrl) => {
   messageModel.updateStatus(messageData.id, 'delivered');
 
   const payload = buildWebhookPayload(messageData, 'delivered');
-  await sendWebhook(webhookUrl, payload, messageData.id, 'delivered');
+  await sendWebhook(webhookUrl, payload, messageData.id, 'delivered', { appSecret: messageData.tenant?.app_secret });
 });
 
 logger.debug('DELIVERED listener registered');

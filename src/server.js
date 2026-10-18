@@ -5,7 +5,9 @@ const { db } = require('./database/models');
 const { closeDatabase } = require('./database/connection');
 const messagesController = require('./controllers/messagesController');
 const graphController = require('./controllers/graphController');
+const adminController = require('./controllers/adminController');
 const { createAuthMiddleware } = require('./middleware/auth.middleware');
+const tenantService = require('./services/tenantService');
 const { metaError } = require('./utils/metaError');
 const { registerDocs } = require('./plugins/docs');
 
@@ -28,7 +30,12 @@ function createServer() {
   app.decorate('db', db);
 
   // Middleware
-  const authMiddleware = createAuthMiddleware(config);
+  // Each route declares whose token it needs (config.authScope / config.authParam)
+  const authMiddleware = createAuthMiddleware(config, (request) => {
+    const { authScope, authParam } = request.routeOptions.config;
+    if (!authScope) return [config.auth.accessToken];
+    return tenantService.acceptedTokens(authScope, request.params[authParam]);
+  });
 
   // Plugins
   app.register(require('@fastify/cors'), {
@@ -50,6 +57,10 @@ function createServer() {
     auth: authMiddleware,
     config
   });
+  app.register(require('./routes/admin.routes'), {
+    handlers: adminController,
+    config
+  });
 
   // Root endpoint
   app.get('/', { schema: { hide: true } }, async (request, reply) => {
@@ -68,6 +79,8 @@ function createServer() {
         templates: 'GET|POST /v26.0/:wabaId/message_templates',
         upload_session: 'POST /v26.0/:appId/uploads',
         upload_bytes: 'POST /v26.0/upload:<id>',
+        tenants: 'GET|POST /fake/tenants, DELETE /fake/tenants/:phoneNumberId (ADMIN_TOKEN)',
+        reset: 'POST /fake/reset (ADMIN_TOKEN)',
         docs: 'GET /docs (development)'
       },
       documentation: 'See README.md for usage examples'

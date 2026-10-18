@@ -12,9 +12,10 @@ const { signPayload } = require('../utils/signature');
  * @param {string} eventType - Event type (sent, delivered, read, failed, message)
  * @param {object} [options]
  * @param {boolean} [options.logEvent=true] - Persist to webhook_events (outbound messages only)
+ * @param {string} [options.appSecret] - Secret used to sign the body (defaults to APP_SECRET)
  * @returns {Promise<object>} - Response data
  */
-async function sendWebhook(url, payload, messageId, eventType, { logEvent = true } = {}) {
+async function sendWebhook(url, payload, messageId, eventType, { logEvent = true, appSecret = config.meta.appSecret } = {}) {
   const startTime = Date.now();
 
   try {
@@ -31,7 +32,7 @@ async function sendWebhook(url, payload, messageId, eventType, { logEvent = true
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': 'WhatsApp-Fake-Cloud-API/1.0',
-        'X-Hub-Signature-256': signPayload(rawBody, config.meta.appSecret)
+        'X-Hub-Signature-256': signPayload(rawBody, appSecret)
       },
       timeout: 10000, // 10 second timeout
       validateStatus: (status) => status >= 200 && status < 500 // Don't throw on 4xx

@@ -8,17 +8,17 @@ const AUTH_SCHEMES = ['Bearer ', 'OAuth '];
 
 /**
  * Authentication middleware for Bearer / OAuth token validation
- * Validates Authorization header against configured access token
+ * Validates the Authorization header against the tokens accepted for the request
  */
 
 /**
  * Create auth middleware
  * @param {object} config - Configuration object
+ * @param {Function} [acceptedTokens] - (request) => string[] tokens accepted for this request;
+ *   defaults to the configured access token
  * @returns {Function} - Fastify middleware function
  */
-function createAuthMiddleware(config) {
-  const expectedToken = config.auth.accessToken;
-
+function createAuthMiddleware(config, acceptedTokens = () => [config.auth.accessToken]) {
   return async function authMiddleware(request, reply) {
     const authHeader = request.headers.authorization;
 
@@ -44,7 +44,7 @@ function createAuthMiddleware(config) {
     const token = authHeader.substring(scheme.length);
 
     // Validate token
-    if (token !== expectedToken) {
+    if (!token || !acceptedTokens(request).includes(token)) {
       return reply.status(401).send(metaError(
         190,
         'Invalid OAuth access token - Cannot parse access token',

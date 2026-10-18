@@ -1,4 +1,4 @@
-const config = require('../config');
+const tenantService = require('./tenantService');
 const { metaError } = require('../utils/metaError');
 const { pickFields } = require('../utils/fields');
 
@@ -14,7 +14,7 @@ const DEFAULT_FIELDS = [
 
 /**
  * Get a business phone number node
- * Any numeric ID resolves to the configured business profile
+ * Registered numbers return their own profile; any other numeric ID the .env profile
  * @param {string} phoneNumberId - Phone number ID from the path
  * @param {string|undefined} fields - Graph `fields` parameter
  * @returns {object} - { response } or { error } in Meta format
@@ -29,12 +29,13 @@ function getPhoneNumber(phoneNumberId, fields) {
     };
   }
 
+  const tenant = tenantService.tenantForPhone(phoneNumberId);
   const phoneNumber = {
     id: phoneNumberId,
-    verified_name: config.meta.verifiedName,
+    verified_name: tenant.verified_name,
     code_verification_status: 'VERIFIED',
-    display_phone_number: config.meta.displayPhoneNumber,
-    quality_rating: config.meta.qualityRating,
+    display_phone_number: tenant.display_phone_number,
+    quality_rating: tenant.quality_rating,
     platform_type: 'CLOUD_API',
     throughput: { level: 'STANDARD' }
   };

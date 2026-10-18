@@ -1,4 +1,7 @@
-require('dotenv').config({ quiet: true });
+// Tests configure process.env themselves; a local .env must not leak into them
+if (!process.env.NODE_TEST_CONTEXT) {
+  require('dotenv').config({ quiet: true });
+}
 const { resolveLogDir } = require('../utils/logDir');
 
 /**
@@ -37,6 +40,11 @@ const config = {
   // Authentication
   auth: {
     accessToken: process.env.API_ACCESS_TOKEN || 'your_fake_bearer_token_here'
+  },
+
+  // Fake-only admin API (tenants); disabled when unset
+  admin: {
+    token: process.env.ADMIN_TOKEN || ''
   },
 
   // Delays (in milliseconds)
@@ -92,7 +100,9 @@ const config = {
   logging: {
     dir: resolveLogDir(process.env),
     level: process.env.LOG_LEVEL || 'info',
-    pretty: process.env.LOG_PRETTY === 'true'
+    pretty: process.env.LOG_PRETTY === 'true',
+    // Also write JSON logs to stdout (used by the Docker image)
+    stdout: process.env.LOG_STDOUT === 'true'
   }
 };
 

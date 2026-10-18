@@ -109,7 +109,7 @@ function buildPricing(messageData) {
  */
 function buildWebhookPayload(messageData, status, errorCode = null) {
   const timestamp = Math.floor(Date.now() / 1000).toString();
-  const { meta } = config;
+  const sender = senderOf(messageData);
 
   const statusObject = {
     id: messageData.id,
@@ -138,19 +138,33 @@ function buildWebhookPayload(messageData, status, errorCode = null) {
   return {
     object: 'whatsapp_business_account',
     entry: [{
-      id: meta.wabaId,
+      id: sender.waba_id,
       changes: [{
         value: {
           messaging_product: 'whatsapp',
           metadata: {
-            display_phone_number: meta.displayPhoneNumber,
-            phone_number_id: meta.phoneNumberId
+            display_phone_number: sender.display_phone_number,
+            phone_number_id: sender.phone_number_id
           },
           statuses: [statusObject]
         },
         field: 'messages'
       }]
     }]
+  };
+}
+
+/**
+ * Business number that sent the message (its tenant, or the .env number)
+ * @private
+ */
+function senderOf(messageData) {
+  if (messageData.tenant) return messageData.tenant;
+  const { meta } = config;
+  return {
+    waba_id: meta.wabaId,
+    display_phone_number: meta.displayPhoneNumber,
+    phone_number_id: meta.phoneNumberId
   };
 }
 

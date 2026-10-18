@@ -71,7 +71,8 @@ function registerDocs(app, config) {
       servers: [{ url: `http://localhost:${config.server.port}` }],
       components: {
         securitySchemes: {
-          bearerAuth: { type: 'http', scheme: 'bearer', description: 'Value of API_ACCESS_TOKEN (Authorization: OAuth <token> is accepted too)' }
+          bearerAuth: { type: 'http', scheme: 'bearer', description: 'Value of API_ACCESS_TOKEN, or the access_token of a registered phone number (Authorization: OAuth <token> is accepted too)' },
+          adminAuth: { type: 'http', scheme: 'bearer', description: 'Value of ADMIN_TOKEN' }
         }
       },
       tags: [
@@ -80,6 +81,7 @@ function registerDocs(app, config) {
         { name: 'Templates', description: 'Message templates (seeded per WABA, reviewed after a delay)' },
         { name: 'Uploads', description: 'Resumable Upload API for template header samples' },
         { name: 'Simulation', description: 'Fake-only endpoints to drive tests' },
+        { name: 'Admin', description: 'Fake-only tenant registry (requires ADMIN_TOKEN)' },
         { name: 'Debug', description: 'Inspect stored messages and webhooks' },
         { name: 'Health' }
       ]
