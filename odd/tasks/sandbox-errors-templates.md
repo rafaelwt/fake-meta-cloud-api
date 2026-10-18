@@ -13,8 +13,8 @@ Branch: feat/sync-errors-template-validation · Delivery: work-unit commits, pus
 ## Tasks
 
 - [x] T1 · S1 · inline · SYNC_ERROR_PATTERNS (+ xN fail-then-accept) and RESPONSE_DELAY_PATTERNS · b520cb6
-- [x] T2 · S2 · inline · template validation on send (opt-in TEMPLATE_VALIDATION_ENFORCED) · next commit
-- [ ] T3 · S3 · inline · README, .env.example; report to bulk-whatsapp-app
+- [x] T2 · S2 · inline · template validation on send (opt-in TEMPLATE_VALIDATION_ENFORCED) · 0204a3b
+- [x] T3 · S3 · inline · README, .env.example (in b520cb6, 0204a3b); report to bulk-whatsapp-app
 
 ## Log
 
