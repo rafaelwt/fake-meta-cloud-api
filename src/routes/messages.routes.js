@@ -27,6 +27,9 @@ const versionedParams = {
 
 const security = [{ bearerAuth: [] }];
 
+// The path ID is a phone number: its tenant's token is required
+const phoneAuth = { authScope: 'phone', authParam: 'wabaId' };
+
 /**
  * Messages Routes
  * Defines HTTP endpoints and connects to controller handlers
@@ -46,6 +49,7 @@ async function messagesRoutes(fastify, options) {
       body: messagesBodySchema,
       params: versionedParams
     },
+    config: phoneAuth,
     onRequest: auth
   }, handlers.sendMessage);
 
@@ -60,6 +64,7 @@ async function messagesRoutes(fastify, options) {
       security,
       params: versionedParams
     },
+    config: phoneAuth,
     onRequest: auth
   }, handlers.getStats);
 
@@ -80,6 +85,7 @@ async function messagesRoutes(fastify, options) {
         }
       }
     },
+    config: phoneAuth,
     onRequest: auth
   }, handlers.getWebhookEvents);
 
@@ -95,6 +101,7 @@ async function messagesRoutes(fastify, options) {
       params: versionedParams,
       body: inboundRequestSchema
     },
+    config: phoneAuth,
     onRequest: auth
   }, handlers.simulateInbound);
 }

@@ -56,6 +56,7 @@ async function graphRoutes(fastify, options) {
         }
       }
     },
+    config: { authScope: 'node', authParam: 'nodeId' },
     onRequest: auth
   }, handlers.getNode);
 
@@ -78,6 +79,7 @@ async function graphRoutes(fastify, options) {
         }
       }
     },
+    config: { authScope: 'node', authParam: 'nodeId' },
     onRequest: [dropEmptyContentType, auth]
   }, handlers.postNode);
 
@@ -103,6 +105,7 @@ async function graphRoutes(fastify, options) {
         }
       }
     },
+    config: { authScope: 'waba', authParam: 'wabaId' },
     onRequest: auth
   }, handlers.listTemplates);
 
@@ -118,6 +121,7 @@ async function graphRoutes(fastify, options) {
       params: params('wabaId', '123456789012345'),
       body: templateRequestSchema
     },
+    config: { authScope: 'waba', authParam: 'wabaId' },
     onRequest: auth
   }, handlers.createTemplate);
 
@@ -140,6 +144,7 @@ async function graphRoutes(fastify, options) {
         }
       }
     },
+    config: { authScope: 'any' },
     onRequest: auth
   }, handlers.createUploadSession);
 }

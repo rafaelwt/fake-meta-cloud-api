@@ -2,6 +2,7 @@ const { messageModel, inboundMessageModel } = require('../database/models');
 const { startMessageFlow } = require('../events/emitter');
 const { shouldTriggerError } = require('../utils/errorPatterns');
 const config = require('../config');
+const tenantService = require('./tenantService');
 
 const SERVICE_WINDOW_SECONDS = 24 * 60 * 60;
 const RE_ENGAGEMENT_ERROR = 131047;
@@ -52,15 +53,31 @@ function processMessage(message, messageId, wabaId) {
     id: messageId,
     recipient_id: recipientId,
     type: message.type,
-    template_name: message.template?.name
+    template_name: message.template?.name,
+    tenant: webhookContext(tenantService.tenantForPhone(wabaId))
   };
-  startMessageFlow(messageData, config.webhook.url, errorCode);
+  startMessageFlow(messageData, messageData.tenant.webhook_url, errorCode);
 
   // Return immediate response
   return {
     messaging_product: 'whatsapp',
     contacts: [{ input: message.to, wa_id: recipientId }],
     messages: [{ id: messageId, message_status: 'accepted' }]
+  };
+}
+
+/**
+ * Tenant fields needed to build and sign webhooks
+ * @param {object} tenant - Tenant
+ * @returns {object} - Webhook context
+ */
+function webhookContext(tenant) {
+  return {
+    phone_number_id: tenant.phone_number_id,
+    waba_id: tenant.waba_id,
+    display_phone_number: tenant.display_phone_number,
+    webhook_url: tenant.webhook_url,
+    app_secret: tenant.app_secret
   };
 }
 

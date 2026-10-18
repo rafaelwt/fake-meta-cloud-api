@@ -1,6 +1,6 @@
 const { inboundMessageModel } = require('../database/models');
 const { sendWebhook } = require('./webhookService');
-const config = require('../config');
+const tenantService = require('./tenantService');
 
 /**
  * Process a simulated inbound user message
@@ -21,7 +21,9 @@ function processInbound(inbound, messageId, wabaId) {
     message_content: inbound
   });
 
+  const tenant = tenantService.tenantForPhone(wabaId);
   const payload = buildInboundPayload({
+    tenant,
     id: messageId,
     from: fromId,
     name: inbound.name || fromId,
@@ -30,7 +32,7 @@ function processInbound(inbound, messageId, wabaId) {
   });
 
   // Inbound webhooks are not tied to an outbound message, so they are not logged as events
-  sendWebhook(config.webhook.url, payload, messageId, 'message', { logEvent: false });
+  sendWebhook(tenant.webhook_url, payload, messageId, 'message', { logEvent: false, appSecret: tenant.app_secret });
 
   return {
     messaging_product: 'whatsapp',
@@ -40,22 +42,22 @@ function processInbound(inbound, messageId, wabaId) {
 
 /**
  * Build webhook payload for an inbound text message
- * @param {object} message - id, from, name, timestamp, body
+ * @param {object} message - tenant, id, from, name, timestamp, body
  * @returns {object} - Webhook payload
  */
 function buildInboundPayload(message) {
-  const { meta } = config;
+  const { tenant } = message;
 
   return {
     object: 'whatsapp_business_account',
     entry: [{
-      id: meta.wabaId,
+      id: tenant.waba_id,
       changes: [{
         value: {
           messaging_product: 'whatsapp',
           metadata: {
-            display_phone_number: meta.displayPhoneNumber,
-            phone_number_id: meta.phoneNumberId
+            display_phone_number: tenant.display_phone_number,
+            phone_number_id: tenant.phone_number_id
           },
           contacts: [{
             profile: { name: message.name },

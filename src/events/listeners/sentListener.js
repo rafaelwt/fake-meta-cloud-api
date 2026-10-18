@@ -14,7 +14,7 @@ eventBus.on('status:sent', async (messageData, webhookUrl) => {
   messageModel.updateStatus(messageData.id, 'sent');
 
   const payload = buildWebhookPayload(messageData, 'sent');
-  await sendWebhook(webhookUrl, payload, messageData.id, 'sent');
+  await sendWebhook(webhookUrl, payload, messageData.id, 'sent', { appSecret: messageData.tenant?.app_secret });
 });
 
 logger.debug('SENT listener registered');

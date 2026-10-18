@@ -14,7 +14,7 @@ eventBus.on('status:read', async (messageData, webhookUrl) => {
   messageModel.updateStatus(messageData.id, 'read');
 
   const payload = buildWebhookPayload(messageData, 'read');
-  await sendWebhook(webhookUrl, payload, messageData.id, 'read');
+  await sendWebhook(webhookUrl, payload, messageData.id, 'read', { appSecret: messageData.tenant?.app_secret });
 });
 
 logger.debug('READ listener registered');

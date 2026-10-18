@@ -5,6 +5,7 @@ const IdGenerator = require('../utils/idGenerator');
 const { metaError } = require('../utils/metaError');
 const { pickFields } = require('../utils/fields');
 const config = require('../config');
+const tenantService = require('./tenantService');
 const logger = require('../logger');
 
 // Graph returns these when `fields` is not given
@@ -152,13 +153,16 @@ function reviewDueTemplates() {
 
     logger.info({ templateId: template.id, name: template.name, status }, 'Template reviewed');
 
-    sendWebhook(
-      config.webhook.url,
-      buildStatusUpdatePayload(template, status, reason),
-      template.id,
-      'message_template_status_update',
-      { logEvent: false }
-    ).catch(err => logger.error({ err, templateId: template.id }, 'Template webhook failed'));
+    const payload = buildStatusUpdatePayload(template, status, reason);
+    for (const target of tenantService.webhookTargetsForWaba(template.waba_id)) {
+      sendWebhook(
+        target.webhook_url,
+        payload,
+        template.id,
+        'message_template_status_update',
+        { logEvent: false, appSecret: target.app_secret }
+      ).catch(err => logger.error({ err, templateId: template.id }, 'Template webhook failed'));
+    }
   }
 }
 

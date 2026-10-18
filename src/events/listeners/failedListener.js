@@ -16,7 +16,7 @@ eventBus.on('status:failed', async (messageData, webhookUrl, errorCode) => {
   messageModel.markAsFailed(messageData.id, errorCode, errorDetails?.message || 'Unknown error');
 
   const payload = buildWebhookPayload(messageData, 'failed', errorCode);
-  await sendWebhook(webhookUrl, payload, messageData.id, 'failed');
+  await sendWebhook(webhookUrl, payload, messageData.id, 'failed', { appSecret: messageData.tenant?.app_secret });
 });
 
 logger.debug('FAILED listener registered');

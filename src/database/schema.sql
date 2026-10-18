@@ -86,3 +86,20 @@ CREATE TABLE IF NOT EXISTS uploads (
     handle TEXT,                            -- Set once the upload completes
     created_at INTEGER NOT NULL             -- Unix timestamp
 );
+
+-- Table: tenants
+-- Registered business phone numbers, each with its own token and webhook
+CREATE TABLE IF NOT EXISTS tenants (
+    phone_number_id TEXT PRIMARY KEY,
+    waba_id TEXT NOT NULL,
+    display_phone_number TEXT,
+    verified_name TEXT,
+    quality_rating TEXT,
+    access_token TEXT NOT NULL,
+    webhook_url TEXT,                       -- NULL: use WEBHOOK_URL
+    app_secret TEXT,                        -- NULL: use APP_SECRET
+    created_at INTEGER NOT NULL,            -- Unix timestamp
+    updated_at INTEGER NOT NULL             -- Unix timestamp
+);
+
+CREATE INDEX IF NOT EXISTS idx_tenants_waba ON tenants(waba_id);

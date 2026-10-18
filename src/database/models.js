@@ -4,6 +4,7 @@ const WebhookEventModel = require('./webhookEventModel');
 const InboundMessageModel = require('./inboundMessageModel');
 const TemplateModel = require('./templateModel');
 const UploadModel = require('./uploadModel');
+const TenantModel = require('./tenantModel');
 const config = require('../config');
 const logger = require('../logger');
 
@@ -22,6 +23,7 @@ const webhookEventModel = new WebhookEventModel(db);
 const inboundMessageModel = new InboundMessageModel(db);
 const templateModel = new TemplateModel(db);
 const uploadModel = new UploadModel(db);
+const tenantModel = new TenantModel(db);
 
 module.exports = {
   db,
@@ -29,5 +31,6 @@ module.exports = {
   webhookEventModel,
   inboundMessageModel,
   templateModel,
-  uploadModel
+  uploadModel,
+  tenantModel
 };

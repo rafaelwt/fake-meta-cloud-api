@@ -5,6 +5,7 @@ const { metaError } = require('../utils/metaError');
 const { checkSyncError, getResponseDelay } = require('../utils/syncErrors');
 const config = require('../config');
 const templateService = require('../services/templateService');
+const tenantService = require('../services/tenantService');
 const { validateTemplateSend } = require('../services/templateValidator');
 
 /**
@@ -32,7 +33,7 @@ async function sendMessage(request, reply) {
   }
 
   if (message.type === 'template' && config.behavior.templateValidationEnforced) {
-    const templateWabaId = resolveTemplateWabaId(wabaId);
+    const templateWabaId = tenantService.templateWabaFor(wabaId);
     const stored = templateService.findTemplate(templateWabaId, message.template.name, message.template.language.code);
     const templateError = validateTemplateSend(stored, message.template);
     if (templateError) {
@@ -47,14 +48,6 @@ async function sendMessage(request, reply) {
   request.log.info({ messageId, recipient: message.to, type: message.type }, 'Message accepted');
 
   return response;
-}
-
-/**
- * Templates live under the WABA: the configured phone number sends with WABA_ID's templates,
- * any other path ID is treated as its own WABA
- */
-function resolveTemplateWabaId(pathId) {
-  return pathId === config.meta.phoneNumberId ? config.meta.wabaId : pathId;
 }
 
 /**

@@ -42,6 +42,11 @@ const config = {
     accessToken: process.env.API_ACCESS_TOKEN || 'your_fake_bearer_token_here'
   },
 
+  // Fake-only admin API (tenants); disabled when unset
+  admin: {
+    token: process.env.ADMIN_TOKEN || ''
+  },
+
   // Delays (in milliseconds)
   delays: {
     sent: {

@@ -20,6 +20,7 @@ Mock implementation of WhatsApp Business Cloud API for testing and development. 
 - **Phone Number Node**: `GET /:version/:phoneNumberId` returns the verified business profile
 - **Message Templates**: list/create templates, approved seeds per WABA, delayed review and `message_template_status_update` webhooks
 - **Resumable Upload API**: upload sessions and raw byte uploads that return a file handle (`h`) for template headers
+- **Multi-tenant**: register phone numbers with their own token, webhook URL and app secret (`/fake/tenants`, SQLite)
 
 ## Architecture
 
@@ -76,6 +77,7 @@ WEBHOOK_URL=http://localhost:4000/webhook
 
 # Authentication
 API_ACCESS_TOKEN=your_fake_bearer_token_here
+ADMIN_TOKEN=change_me   # enables the fake-only /fake/tenants API (disabled when unset)
 
 # App secret used to sign webhooks (X-Hub-Signature-256)
 APP_SECRET=your_fake_app_secret_here
@@ -480,6 +482,52 @@ response is `{ id, file_offset }`. `GET /v26.0/upload:<id>` returns the current
 `file_offset`. File bytes are not stored. Bodies up to `UPLOAD_MAX_BYTES`
 (100 MB by default) are accepted.
 
+### Multi-tenant (fake-only)
+
+The `.env` values (`PHONE_NUMBER_ID`, `WABA_ID`, `API_ACCESS_TOKEN`, `WEBHOOK_URL`,
+`APP_SECRET`) are the **default tenant**. To serve several clients, register extra phone
+numbers with `ADMIN_TOKEN` set. They are stored in SQLite, so they survive restarts
+when `DB_PATH` lives on a volume.
+
+```bash
+curl -X POST http://localhost:3000/fake/tenants \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phone_number_id": "555001",
+    "waba_id": "777001",
+    "display_phone_number": "+5491155550001",
+    "verified_name": "Client A",
+    "access_token": "token_client_a",
+    "webhook_url": "https://client-a.example.com/webhooks/whatsapp",
+    "app_secret": "secret_client_a"
+  }'
+```
+
+- `POST /fake/tenants` answers `201` when the number is created and `200` when it is updated.
+  `access_token` and `app_secret` are never returned. `display_phone_number`,
+  `verified_name`, `quality_rating`, `webhook_url` and `app_secret` fall back to the `.env` values.
+- `GET /fake/tenants` lists the numbers, and `DELETE /fake/tenants/:phoneNumberId` removes one
+  (unknown → `404`).
+- Without `ADMIN_TOKEN` these routes answer `403`. A wrong admin token gets `401` with code `190`.
+
+Once a number is registered:
+
+| Route | Accepted token |
+|-------|----------------|
+| `/:version/:phoneNumberId/...` (messages, stats, webhooks/events, simulate/inbound, phone node) | that number's `access_token` only |
+| `/:version/:wabaId/message_templates` | the `access_token` of any number in that WABA |
+| `/:version/:appId/uploads`, `/:version/upload:<id>` | `API_ACCESS_TOKEN` or any registered token |
+| IDs that are not registered | `API_ACCESS_TOKEN` (single-tenant behavior) |
+
+Status and inbound webhooks for a number go to its `webhook_url`, signed with its
+`app_secret`, with `entry[0].id` = its `waba_id` and `metadata.phone_number_id` = the number.
+Template status webhooks go to every distinct webhook of the numbers in that WABA. Template
+sends (with `TEMPLATE_VALIDATION_ENFORCED=true`) use the templates of the number's `waba_id`.
+
+Not isolated per tenant yet: `messages/stats` and `webhooks/events` show every number's
+data, and the 24h service window only looks at the sender's phone (not the receiving number).
+
 ### Customer Service Window
 
 With `SERVICE_WINDOW_ENFORCED=true`, free-form (non-template) messages are only
@@ -681,7 +729,8 @@ fake-meta-cloud-api/
 │   │   └── errorCodes.js             # Meta error codes
 │   ├── controllers/
 │   │   ├── messagesController.js     # Message route handlers
-│   │   └── graphController.js        # Phone number, templates, uploads
+│   │   ├── graphController.js        # Phone number, templates, uploads
+│   │   └── adminController.js        # Fake-only tenant registry
 │   ├── database/
 │   │   ├── connection.js             # SQLite setup
 │   │   ├── models.js                 # Model instances
@@ -691,6 +740,7 @@ fake-meta-cloud-api/
 │   │   ├── templateModel.js          # Message templates
 │   │   ├── templateSeeds.js          # Approved seed templates
 │   │   ├── uploadModel.js            # Upload sessions
+│   │   ├── tenantModel.js            # Registered phone numbers
 │   │   └── schema.sql                # Database schema
 │   ├── events/
 │   │   ├── bus.js                    # EventEmitter bus
@@ -701,11 +751,13 @@ fake-meta-cloud-api/
 │   ├── routes/
 │   │   ├── health.js                 # Health check
 │   │   ├── messages.routes.js        # Versioned message endpoints
-│   │   └── graph.routes.js           # Phone number, templates, uploads
+│   │   ├── graph.routes.js           # Phone number, templates, uploads
+│   │   └── admin.routes.js           # /fake/tenants (ADMIN_TOKEN)
 │   ├── schemas/
 │   │   ├── messageRequest.schema.js  # Validation schemas
 │   │   ├── inboundRequest.schema.js  # Simulated inbound schema
-│   │   └── templateRequest.schema.js # Template creation schema
+│   │   ├── templateRequest.schema.js # Template creation schema
+│   │   └── tenantRequest.schema.js   # Tenant registration schema
 │   ├── services/
 │   │   ├── messageService.js         # Message orchestration + service window
 │   │   ├── inboundService.js         # Simulated inbound messages
@@ -713,7 +765,8 @@ fake-meta-cloud-api/
 │   │   ├── phoneNumberService.js     # Phone number node
 │   │   ├── templateService.js        # Templates, seeds, review lifecycle
 │   │   ├── templateValidator.js      # Template send validation (132001/132000/132012)
-│   │   └── uploadService.js          # Resumable Upload API
+│   │   ├── uploadService.js          # Resumable Upload API
+│   │   └── tenantService.js          # Tenants, per-route tokens, webhook targets
 │   ├── utils/
 │   │   ├── delays.js                 # Random delay helpers
 │   │   ├── errorPatterns.js          # Pattern matching
