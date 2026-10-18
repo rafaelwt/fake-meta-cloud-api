@@ -23,6 +23,8 @@ const config = {
     wabaId: process.env.WABA_ID || '123456789012345',
     phoneNumberId: process.env.PHONE_NUMBER_ID || '987654321098765',
     displayPhoneNumber: process.env.DISPLAY_PHONE_NUMBER || '+1234567890',
+    verifiedName: process.env.VERIFIED_NAME || 'Fake Business',
+    qualityRating: process.env.QUALITY_RATING || 'GREEN',
     appSecret: process.env.APP_SECRET || 'your_fake_app_secret_here'
   },
 
@@ -68,7 +70,16 @@ const config = {
   // Template pricing categories
   templates: {
     categories: process.env.TEMPLATE_CATEGORIES || '',
-    defaultCategory: process.env.TEMPLATE_DEFAULT_CATEGORY || 'marketing'
+    defaultCategory: process.env.TEMPLATE_DEFAULT_CATEGORY || 'marketing',
+    // Created templates stay PENDING this long before review
+    reviewDelayMs: parseInt(process.env.TEMPLATE_REVIEW_DELAY_MS || '5000', 10),
+    // Created templates whose name starts with this prefix get REJECTED
+    rejectPrefix: process.env.TEMPLATE_REJECT_PREFIX || 'reject_'
+  },
+
+  // Resumable Upload API
+  uploads: {
+    maxBytes: parseInt(process.env.UPLOAD_MAX_BYTES || String(100 * 1024 * 1024), 10)
   },
 
   // Logging

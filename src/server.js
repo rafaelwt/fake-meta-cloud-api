@@ -4,6 +4,7 @@ const logger = require('./logger');
 const { db } = require('./database/models');
 const { closeDatabase } = require('./database/connection');
 const messagesController = require('./controllers/messagesController');
+const graphController = require('./controllers/graphController');
 const { createAuthMiddleware } = require('./middleware/auth.middleware');
 const { metaError } = require('./utils/metaError');
 const { registerDocs } = require('./plugins/docs');
@@ -44,6 +45,11 @@ function createServer() {
     handlers: messagesController,
     auth: authMiddleware
   });
+  app.register(require('./routes/graph.routes'), {
+    handlers: graphController,
+    auth: authMiddleware,
+    config
+  });
 
   // Root endpoint
   app.get('/', { schema: { hide: true } }, async (request, reply) => {
@@ -58,6 +64,10 @@ function createServer() {
         stats: 'GET /v26.0/:wabaId/messages/stats',
         webhook_events: 'GET /v26.0/:wabaId/webhooks/events',
         simulate_inbound: 'POST /v26.0/:wabaId/simulate/inbound',
+        phone_number: 'GET /v26.0/:phoneNumberId',
+        templates: 'GET|POST /v26.0/:wabaId/message_templates',
+        upload_session: 'POST /v26.0/:appId/uploads',
+        upload_bytes: 'POST /v26.0/upload:<id>',
         docs: 'GET /docs (development)'
       },
       documentation: 'See README.md for usage examples'

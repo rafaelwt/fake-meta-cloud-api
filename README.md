@@ -17,6 +17,9 @@ Mock implementation of WhatsApp Business Cloud API for testing and development. 
 - **Signed Webhooks**: `X-Hub-Signature-256` header, verifiable with your app secret
 - **Inbound Messages**: simulate users writing to the business (`messages[]` webhook)
 - **Service Window**: optional 24h customer service window enforcement (error 131047)
+- **Phone Number Node**: `GET /:version/:phoneNumberId` returns the verified business profile
+- **Message Templates**: list/create templates, approved seeds per WABA, delayed review and `message_template_status_update` webhooks
+- **Resumable Upload API**: upload sessions and raw byte uploads that return a file handle (`h`) for template headers
 
 ## Architecture
 
@@ -81,6 +84,8 @@ APP_SECRET=your_fake_app_secret_here
 WABA_ID=123456789012345
 PHONE_NUMBER_ID=987654321098765
 DISPLAY_PHONE_NUMBER=+1234567890
+VERIFIED_NAME=Fake Business   # returned by GET /:version/:phoneNumberId
+QUALITY_RATING=GREEN
 
 # Delays (milliseconds)
 DELAY_SENT_MIN=500
@@ -100,6 +105,13 @@ ERROR_PATTERNS=+99999:131026,+88888:131047,+77777:131031
 # Template pricing categories (template_name:category, trailing * = prefix)
 TEMPLATE_CATEGORIES=otp_*:authentication,order_update:utility
 TEMPLATE_DEFAULT_CATEGORY=marketing
+
+# Message templates API
+TEMPLATE_REVIEW_DELAY_MS=5000     # created templates stay PENDING this long
+TEMPLATE_REJECT_PREFIX=reject_    # names with this prefix end REJECTED
+
+# Resumable Upload API (max body size of an upload, bytes)
+UPLOAD_MAX_BYTES=104857600
 ```
 
 Status webhooks report per-message pricing (`PMP`): free-form messages are
@@ -339,6 +351,116 @@ Webhook payload:
 }
 ```
 
+#### 10. Get Phone Number
+
+Any numeric ID returns the configured business profile (`DISPLAY_PHONE_NUMBER`,
+`VERIFIED_NAME`, `QUALITY_RATING`). `fields` limits the response; `id` is always
+included. A non-numeric ID returns code 100 / subcode 33, like Graph.
+
+```bash
+curl "http://localhost:3000/v26.0/987654321098765?fields=display_phone_number,verified_name,quality_rating" \
+  -H "Authorization: Bearer your_fake_bearer_token_here"
+```
+
+```json
+{
+  "display_phone_number": "+1234567890",
+  "verified_name": "Fake Business",
+  "quality_rating": "GREEN",
+  "id": "987654321098765"
+}
+```
+
+#### 11. Message Templates
+
+Every WABA ID starts with these approved templates (seeded on first use):
+
+| Name | Language | Category | Format | Variables |
+|------|----------|----------|--------|-----------|
+| `hello_world` | `en_US` | UTILITY | POSITIONAL | none (text header + footer) |
+| `order_update` | `en_US` | UTILITY | POSITIONAL | body `{{1}}` |
+| `promo_image` | `en_US` | MARKETING | POSITIONAL | IMAGE header, body `{{1}}`, URL + quick reply buttons |
+| `welcome_named` | `en_US` | MARKETING | NAMED | body `{{first_name}}`, `{{code}}` |
+
+List them (`limit` defaults to 25; `paging.next` is an absolute URL when more remain;
+optional filters: `name`, `status`, `category`, `language`):
+
+```bash
+curl "http://localhost:3000/v26.0/123456789012345/message_templates?limit=100&fields=id,name,language,category,status,parameter_format,components,rejected_reason" \
+  -H "Authorization: Bearer your_fake_bearer_token_here"
+```
+
+Create one:
+
+```bash
+curl -X POST http://localhost:3000/v26.0/123456789012345/message_templates \
+  -H "Authorization: Bearer your_fake_bearer_token_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "spring_sale",
+    "language": "en_US",
+    "category": "MARKETING",
+    "parameter_format": "POSITIONAL",
+    "components": [
+      { "type": "BODY", "text": "Hi {{1}}, our sale starts today!", "example": { "body_text": [["Ana"]] } }
+    ]
+  }'
+```
+
+```json
+{ "id": "5839201746381029", "status": "PENDING", "category": "MARKETING" }
+```
+
+After `TEMPLATE_REVIEW_DELAY_MS` the template becomes `APPROVED`, or `REJECTED`
+with `rejected_reason: "INVALID_FORMAT"` when its name starts with
+`TEMPLATE_REJECT_PREFIX` (`reject_`). Either way a signed webhook is sent:
+
+```json
+{
+  "object": "whatsapp_business_account",
+  "entry": [{
+    "id": "123456789012345",
+    "time": 1748718740,
+    "changes": [{
+      "field": "message_template_status_update",
+      "value": {
+        "event": "APPROVED",
+        "message_template_id": 5839201746381029,
+        "message_template_name": "spring_sale",
+        "message_template_language": "en_US",
+        "reason": "NONE"
+      }
+    }]
+  }]
+}
+```
+
+A name + language that already exists in the same WABA returns HTTP 400 with
+`code: 100`, `error_subcode: 2388024`.
+
+Sending a template message does not check this list; any template name is accepted.
+
+#### 12. Resumable Upload (template header samples)
+
+```bash
+# 1. Start a session (supported types: image/jpeg, image/jpg, image/png, video/mp4, application/pdf)
+curl -X POST "http://localhost:3000/v26.0/1234567890/uploads?file_name=header.jpg&file_length=102400&file_type=image/jpeg" \
+  -H "Authorization: Bearer your_fake_bearer_token_here"
+# {"id":"upload:Q2xh..."}
+
+# 2. Upload the raw bytes (content-type may be omitted or application/octet-stream)
+curl -X POST "http://localhost:3000/v26.0/upload:Q2xh..." \
+  -H "Authorization: OAuth your_fake_bearer_token_here" \
+  -H "file_offset: 0" \
+  --data-binary @header.jpg
+# {"h":"4::aW1hZ2UvanBlZw==:ARb..."}
+```
+
+The handle (`h`) is returned once `file_length` bytes arrived; until then the
+response is `{ id, file_offset }`. `GET /v26.0/upload:<id>` returns the current
+`file_offset`. File bytes are not stored. Bodies up to `UPLOAD_MAX_BYTES`
+(100 MB by default) are accepted.
+
 ### Customer Service Window
 
 With `SERVICE_WINDOW_ENFORCED=true`, free-form (non-template) messages are only
@@ -514,33 +636,43 @@ fake-meta-cloud-api/
 │   │   ├── index.js                  # Centralized config
 │   │   └── errorCodes.js             # Meta error codes
 │   ├── controllers/
-│   │   └── messagesController.js     # Route handlers
+│   │   ├── messagesController.js     # Message route handlers
+│   │   └── graphController.js        # Phone number, templates, uploads
 │   ├── database/
 │   │   ├── connection.js             # SQLite setup
 │   │   ├── models.js                 # Model instances
 │   │   ├── messageModel.js           # Message CRUD
 │   │   ├── inboundMessageModel.js    # Simulated user messages
 │   │   ├── webhookEventModel.js      # Webhook logs
+│   │   ├── templateModel.js          # Message templates
+│   │   ├── templateSeeds.js          # Approved seed templates
+│   │   ├── uploadModel.js            # Upload sessions
 │   │   └── schema.sql                # Database schema
 │   ├── events/
 │   │   ├── bus.js                    # EventEmitter bus
 │   │   ├── emitter.js                # Status flow + webhook payloads
 │   │   └── listeners/                # sent/delivered/read/failed handlers
 │   ├── middleware/
-│   │   └── auth.middleware.js        # Bearer token auth (onRequest)
+│   │   └── auth.middleware.js        # Bearer/OAuth token auth (onRequest)
 │   ├── routes/
 │   │   ├── health.js                 # Health check
-│   │   └── messages.routes.js        # Versioned message endpoints
+│   │   ├── messages.routes.js        # Versioned message endpoints
+│   │   └── graph.routes.js           # Phone number, templates, uploads
 │   ├── schemas/
 │   │   ├── messageRequest.schema.js  # Validation schemas
-│   │   └── inboundRequest.schema.js  # Simulated inbound schema
+│   │   ├── inboundRequest.schema.js  # Simulated inbound schema
+│   │   └── templateRequest.schema.js # Template creation schema
 │   ├── services/
 │   │   ├── messageService.js         # Message orchestration + service window
 │   │   ├── inboundService.js         # Simulated inbound messages
-│   │   └── webhookService.js         # Signed HTTP webhook delivery
+│   │   ├── webhookService.js         # Signed HTTP webhook delivery
+│   │   ├── phoneNumberService.js     # Phone number node
+│   │   ├── templateService.js        # Templates, seeds, review lifecycle
+│   │   └── uploadService.js          # Resumable Upload API
 │   ├── utils/
 │   │   ├── delays.js                 # Random delay helpers
 │   │   ├── errorPatterns.js          # Pattern matching
+│   │   ├── fields.js                 # Graph `fields` parameter
 │   │   ├── idGenerator.js            # wamid generation
 │   │   ├── signature.js              # X-Hub-Signature-256
 │   │   └── templateCategories.js     # Template pricing categories
@@ -630,7 +762,8 @@ pnpm test:watch
 ### Authentication errors
 
 - Verify Bearer token matches `.env` `API_ACCESS_TOKEN`
-- Include `Authorization: Bearer <token>` header
+- Include `Authorization: Bearer <token>` header (`Authorization: OAuth <token>`
+  is accepted too, as in the Graph API)
 - Authentication runs before body validation: a missing or wrong token always
   returns `401` (codes `2500` / `190`), even if the body is invalid
 

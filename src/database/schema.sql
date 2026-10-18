@@ -52,3 +52,37 @@ CREATE TABLE IF NOT EXISTS inbound_messages (
 
 -- Index for service window lookups
 CREATE INDEX IF NOT EXISTS idx_inbound_messages_from ON inbound_messages(from_id, received_at DESC);
+
+-- Table: message_templates
+-- Message templates per WhatsApp Business Account
+CREATE TABLE IF NOT EXISTS message_templates (
+    id TEXT PRIMARY KEY,                    -- Numeric template ID
+    waba_id TEXT NOT NULL,                  -- WhatsApp Business Account ID
+    name TEXT NOT NULL,
+    language TEXT NOT NULL,
+    category TEXT NOT NULL,                 -- MARKETING, UTILITY, AUTHENTICATION
+    status TEXT NOT NULL,                   -- PENDING, APPROVED, REJECTED
+    parameter_format TEXT NOT NULL,         -- POSITIONAL, NAMED
+    components TEXT NOT NULL,               -- JSON stringified components
+    rejected_reason TEXT,                   -- Set when REJECTED
+    message_send_ttl_seconds INTEGER,
+    review_at INTEGER,                      -- Unix ms when a PENDING template gets reviewed
+    created_at INTEGER NOT NULL,            -- Unix timestamp
+    updated_at INTEGER NOT NULL,            -- Unix timestamp
+    UNIQUE (waba_id, name, language)
+);
+
+CREATE INDEX IF NOT EXISTS idx_message_templates_waba ON message_templates(waba_id, created_at);
+
+-- Table: uploads
+-- Resumable Upload API sessions (file bytes are not stored)
+CREATE TABLE IF NOT EXISTS uploads (
+    id TEXT PRIMARY KEY,                    -- Session ID without the 'upload:' prefix
+    app_id TEXT NOT NULL,
+    file_name TEXT,
+    file_length INTEGER NOT NULL,
+    file_type TEXT NOT NULL,
+    file_offset INTEGER NOT NULL DEFAULT 0, -- Bytes received so far
+    handle TEXT,                            -- Set once the upload completes
+    created_at INTEGER NOT NULL             -- Unix timestamp
+);

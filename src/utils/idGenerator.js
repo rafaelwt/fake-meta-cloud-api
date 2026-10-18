@@ -29,6 +29,26 @@ class IdGenerator {
   static generateUUID() {
     return crypto.randomUUID();
   }
+
+  /**
+   * Generate a numeric Graph object ID (e.g. template IDs)
+   * @param {number} [length=16] - Number of digits
+   * @returns {string} - Numeric ID without leading zero
+   */
+  static generateNumericId(length = 16) {
+    let id = String(crypto.randomInt(1, 10));
+    while (id.length < length) id += crypto.randomInt(0, 10);
+    return id;
+  }
+
+  /**
+   * Generate an opaque URL-safe token
+   * @param {number} [bytes=24] - Random bytes
+   * @returns {string} - base64url string
+   */
+  static generateToken(bytes = 24) {
+    return crypto.randomBytes(bytes).toString('base64url');
+  }
 }
 
 module.exports = IdGenerator;

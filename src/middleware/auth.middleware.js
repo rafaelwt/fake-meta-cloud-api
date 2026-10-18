@@ -3,8 +3,11 @@ const { metaError } = require('../utils/metaError');
 // Graph API subcode for an expired, revoked or invalid access token
 const INVALID_TOKEN_SUBCODE = 467;
 
+// Accepted Authorization header schemes
+const AUTH_SCHEMES = ['Bearer ', 'OAuth '];
+
 /**
- * Authentication middleware for Bearer token validation
+ * Authentication middleware for Bearer / OAuth token validation
  * Validates Authorization header against configured access token
  */
 
@@ -27,8 +30,9 @@ function createAuthMiddleware(config) {
       ));
     }
 
-    // Check if it's a Bearer token
-    if (!authHeader.startsWith('Bearer ')) {
+    // Graph API accepts both schemes (the Resumable Upload API documents "OAuth")
+    const scheme = AUTH_SCHEMES.find(prefix => authHeader.startsWith(prefix));
+    if (!scheme) {
       return reply.status(401).send(metaError(
         190,
         'Invalid OAuth access token - Cannot parse access token',
@@ -37,7 +41,7 @@ function createAuthMiddleware(config) {
     }
 
     // Extract token
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    const token = authHeader.substring(scheme.length);
 
     // Validate token
     if (token !== expectedToken) {

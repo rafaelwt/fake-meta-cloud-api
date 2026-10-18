@@ -29,6 +29,9 @@ async function start() {
 ║  - Stats:    GET  /v26.0/:wabaId/messages/stats            ║
 ║  - Events:   GET  /v26.0/:wabaId/webhooks/events           ║
 ║  - Inbound:  POST /v26.0/:wabaId/simulate/inbound          ║
+║  - Phone:    GET  /v26.0/:phoneNumberId                    ║
+║  - Templates: GET|POST /v26.0/:wabaId/message_templates    ║
+║  - Uploads:  POST /v26.0/:appId/uploads + /v26.0/upload:<id>║
 ║                                                            ║
 ╚════════════════════════════════════════════════════════════╝
     `);

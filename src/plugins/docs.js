@@ -71,11 +71,14 @@ function registerDocs(app, config) {
       servers: [{ url: `http://localhost:${config.server.port}` }],
       components: {
         securitySchemes: {
-          bearerAuth: { type: 'http', scheme: 'bearer', description: 'Value of API_ACCESS_TOKEN' }
+          bearerAuth: { type: 'http', scheme: 'bearer', description: 'Value of API_ACCESS_TOKEN (Authorization: OAuth <token> is accepted too)' }
         }
       },
       tags: [
         { name: 'Messages', description: 'Meta Cloud API compatible endpoints' },
+        { name: 'Phone numbers', description: 'Business phone number node' },
+        { name: 'Templates', description: 'Message templates (seeded per WABA, reviewed after a delay)' },
+        { name: 'Uploads', description: 'Resumable Upload API for template header samples' },
         { name: 'Simulation', description: 'Fake-only endpoints to drive tests' },
         { name: 'Debug', description: 'Inspect stored messages and webhooks' },
         { name: 'Health' }
