@@ -133,12 +133,14 @@ function templateWabaFor(phoneNumberId) {
 }
 
 /**
- * Phone number IDs that belong to a WABA (registered numbers, plus PHONE_NUMBER_ID for WABA_ID)
+ * Phone number IDs that belong to a WABA (registered numbers, plus PHONE_NUMBER_ID for WABA_ID);
+ * a WABA nobody owns is an unregistered ID used as its own WABA (see templateWabaFor)
  * @param {string} wabaId - WhatsApp Business Account ID
  * @returns {string[]} - Phone number IDs
  */
 function phoneNumbersOfWaba(wabaId) {
-  return membersOfWaba(wabaId).map(t => t.phone_number_id);
+  const members = membersOfWaba(wabaId).map(t => t.phone_number_id);
+  return members.length ? members : [wabaId];
 }
 
 /**

@@ -17,3 +17,4 @@ Branch: feat/tenant-flow-overrides (stacked on feat/multi-tenant) · Delivery: w
 
 - L1 (2026-10-18): block E request (verbatim above).
 - L2: RED 6/6 (feature missing) → GREEN; bugs found while going green: message_content is already parsed by findById; additionalProperties:false strips unknown keys under Fastify's removeAdditional, so status_delays uses propertyNames to reject them. Suite 139/139.
+- L3: Feature-end verifier (D + E): E PASS (forced status cancels only its message, close cancels all, migration from a8bceba OK); D PASS on Docker (healthy, persistence, non-root, no .env in image), reset scoping and rollback. Blocker: /fake/reset during a pending flow crashed the server (FK error inside sendWebhook's catch → unhandledRejection → exit 1). Fixed: reset cancels the pending flows of the deleted messages; reset of an unowned WABA ID also clears messages sent from it (advisory). Regression tests added; suite 141/141. Scratch removed.
