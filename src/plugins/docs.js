@@ -76,6 +76,9 @@ function registerDocs(app, config) {
       },
       tags: [
         { name: 'Messages', description: 'Meta Cloud API compatible endpoints' },
+        { name: 'Phone numbers', description: 'Business phone number node' },
+        { name: 'Templates', description: 'Message templates (seeded per WABA, reviewed after a delay)' },
+        { name: 'Uploads', description: 'Resumable Upload API for template header samples' },
         { name: 'Simulation', description: 'Fake-only endpoints to drive tests' },
         { name: 'Debug', description: 'Inspect stored messages and webhooks' },
         { name: 'Health' }

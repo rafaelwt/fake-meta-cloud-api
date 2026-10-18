@@ -49,6 +49,9 @@ test('spec documents every public endpoint with bearer auth', async () => {
   assert.deepEqual(Object.keys(spec.paths).sort(), [
     '/health',
     '/ready',
+    '/{version}/{appId}/uploads',
+    '/{version}/{nodeId}',
+    '/{version}/{wabaId}/message_templates',
     '/{version}/{wabaId}/messages',
     '/{version}/{wabaId}/messages/stats',
     '/{version}/{wabaId}/simulate/inbound',
@@ -57,6 +60,7 @@ test('spec documents every public endpoint with bearer auth', async () => {
   assert.equal(spec.components.securitySchemes.bearerAuth.scheme, 'bearer');
   assert.deepEqual(spec.paths['/{version}/{wabaId}/messages'].post.security, [{ bearerAuth: [] }]);
   assert.equal(spec.paths['/health'].get.security, undefined);
+  assert.deepEqual(spec.paths['/{version}/{wabaId}/message_templates'].post.security, [{ bearerAuth: [] }]);
 });
 
 test('messages body is documented as one schema per message type', async () => {

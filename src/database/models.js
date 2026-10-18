@@ -2,6 +2,8 @@ const { initDatabase } = require('./connection');
 const MessageModel = require('./messageModel');
 const WebhookEventModel = require('./webhookEventModel');
 const InboundMessageModel = require('./inboundMessageModel');
+const TemplateModel = require('./templateModel');
+const UploadModel = require('./uploadModel');
 const config = require('../config');
 const logger = require('../logger');
 
@@ -18,10 +20,14 @@ const db = initDatabase(config.database.path, logger);
 const messageModel = new MessageModel(db);
 const webhookEventModel = new WebhookEventModel(db);
 const inboundMessageModel = new InboundMessageModel(db);
+const templateModel = new TemplateModel(db);
+const uploadModel = new UploadModel(db);
 
 module.exports = {
   db,
   messageModel,
   webhookEventModel,
-  inboundMessageModel
+  inboundMessageModel,
+  templateModel,
+  uploadModel
 };
