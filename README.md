@@ -450,7 +450,7 @@ curl -X POST "http://localhost:3000/v26.0/1234567890/uploads?file_name=header.jp
 
 # 2. Upload the raw bytes (content-type may be omitted or application/octet-stream)
 curl -X POST "http://localhost:3000/v26.0/upload:Q2xh..." \
-  -H "Authorization: Bearer your_fake_bearer_token_here" \
+  -H "Authorization: OAuth your_fake_bearer_token_here" \
   -H "file_offset: 0" \
   --data-binary @header.jpg
 # {"h":"4::aW1hZ2UvanBlZw==:ARb..."}
@@ -653,7 +653,7 @@ fake-meta-cloud-api/
 │   │   ├── emitter.js                # Status flow + webhook payloads
 │   │   └── listeners/                # sent/delivered/read/failed handlers
 │   ├── middleware/
-│   │   └── auth.middleware.js        # Bearer token auth (onRequest)
+│   │   └── auth.middleware.js        # Bearer/OAuth token auth (onRequest)
 │   ├── routes/
 │   │   ├── health.js                 # Health check
 │   │   ├── messages.routes.js        # Versioned message endpoints
@@ -762,7 +762,8 @@ pnpm test:watch
 ### Authentication errors
 
 - Verify Bearer token matches `.env` `API_ACCESS_TOKEN`
-- Include `Authorization: Bearer <token>` header
+- Include `Authorization: Bearer <token>` header (`Authorization: OAuth <token>`
+  is accepted too, as in the Graph API)
 - Authentication runs before body validation: a missing or wrong token always
   returns `401` (codes `2500` / `190`), even if the body is invalid
 

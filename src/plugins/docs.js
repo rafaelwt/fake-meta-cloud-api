@@ -71,7 +71,7 @@ function registerDocs(app, config) {
       servers: [{ url: `http://localhost:${config.server.port}` }],
       components: {
         securitySchemes: {
-          bearerAuth: { type: 'http', scheme: 'bearer', description: 'Value of API_ACCESS_TOKEN' }
+          bearerAuth: { type: 'http', scheme: 'bearer', description: 'Value of API_ACCESS_TOKEN (Authorization: OAuth <token> is accepted too)' }
         }
       },
       tags: [

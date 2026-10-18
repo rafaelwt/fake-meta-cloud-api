@@ -13,7 +13,7 @@ Branch: feat/graph-templates-uploads · Delivery: work-unit commits, push/PR dec
 
 ## Tasks
 
-- [ ] T1 · S4 (auth part) · inline · accept `OAuth <token>` besides `Bearer <token>` · Risk item 2 · BLOCKED: needs the user's approval (auto-mode classifier denied the auth change requested by a peer session)
+- [ ] T1 · S4 (auth part) · inline · accept `OAuth <token>` besides `Bearer <token>` · Risk item 2 · user approved ("si")
 - [x] T2 · S1 · inline · GET phone number node · 3aabae5
 - [x] T3 · S2-S3 · inline · templates table, seeds, list/create, review lifecycle + webhook · 3aabae5
 - [x] T4 · S4 · inline · resumable upload session + raw body upload (Bearer only until T1) · 3aabae5
@@ -28,3 +28,4 @@ Branch: feat/graph-templates-uploads · Delivery: work-unit commits, push/PR dec
 - L5: Smoke on a real server (scratch DB, port 3999, NODE_ENV=production): phone fields, templates paging with absolute next, upload with empty Content-Type → `{h}`. Scratch removed.
 - L6: Behavior change: single-segment unknown paths (`GET /v26.0/foo`) now resolve as Graph nodes (401 without token, 400 code 100/33 with token) instead of 2500; `POST /v26.0/<id>` keeps 2500 but checks the token first. Risk: item 3 (shared routing).
 - Next: user decision on T1 (OAuth scheme), then independent verifier for the feature, push/PR on the user's call.
+- L7 (2026-10-17): user approved the OAuth scheme: "si". RED 2/5 (valid OAuth token, OAuth upload) → GREEN; suite 87/87.
