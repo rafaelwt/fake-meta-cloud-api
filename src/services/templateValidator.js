@@ -31,13 +31,25 @@ function validateTemplateSend(stored, sent) {
   if (MEDIA_FORMATS.includes(format)) {
     const param = sentHeader?.parameters?.[0];
     const media = param?.[format.toLowerCase()];
-    if (param?.type !== format.toLowerCase() || !(media?.link || media?.id)) {
+    if (param?.type !== format.toLowerCase()) {
       const received = param?.type ? param.type.toUpperCase() : 'UNKNOWN';
-      return error(400, 132012, '(#132012) Parameter format does not match format in the created template',
-        `header: Format mismatch, expected ${format}, received ${received}`);
+      return formatMismatch(`header: Format mismatch, expected ${format}, received ${received}`);
+    }
+    if (!(media?.link || media?.id)) {
+      return formatMismatch(`header: ${format} parameter requires a link or id`);
     }
     if (sentHeader.parameters.length !== 1) {
       return countMismatch('header', sentHeader.parameters.length, 1);
+    }
+  } else if (format === 'LOCATION') {
+    const params = sentHeader?.parameters || [];
+    const location = params[0]?.location;
+    if (params[0]?.type !== 'location' || location?.latitude === undefined || location?.longitude === undefined) {
+      const received = params[0]?.type ? params[0].type.toUpperCase() : 'UNKNOWN';
+      return formatMismatch(`header: Format mismatch, expected LOCATION with latitude and longitude, received ${received}`);
+    }
+    if (params.length !== 1) {
+      return countMismatch('header', params.length, 1);
     }
   } else {
     const mismatch = checkTextParams('header', header?.text, sentHeader?.parameters, named);
@@ -48,16 +60,22 @@ function validateTemplateSend(stored, sent) {
   const bodyMismatch = checkTextParams('body', body?.text, sentBody?.parameters, named);
   if (bodyMismatch) return bodyMismatch;
 
-  // Buttons: one url parameter per dynamic URL button
+  // Buttons: one url parameter per dynamic URL button and per OTP (copy code / one tap) button
   const dynamicIndexes = buttons
-    .map((button, index) => (button.type?.toUpperCase() === 'URL' && /\{\{.+?\}\}/.test(button.url || '') ? index : null))
+    .map((button, index) => (isDynamicButton(button) ? index : null))
     .filter(index => index !== null);
-  const validButtons = sentUrlButtons.every(c =>
-    dynamicIndexes.includes(Number(c.index)) && (c.parameters || []).length === 1
-  );
-  if (sentUrlButtons.length !== dynamicIndexes.length || !validButtons) {
+  if (sentUrlButtons.length !== dynamicIndexes.length) {
     return error(400, 132000, '(#132000) Number of parameters does not match the expected number of params',
       `button: number of url button params (${sentUrlButtons.length}) does not match the expected number of params (${dynamicIndexes.length})`);
+  }
+  for (const component of sentUrlButtons) {
+    if (!dynamicIndexes.includes(Number(component.index))) {
+      return error(400, 132000, '(#132000) Number of parameters does not match the expected number of params',
+        `button: index ${component.index} is not a dynamic URL or OTP button (expected one of: ${dynamicIndexes.join(', ')})`);
+    }
+    if ((component.parameters || []).length !== 1) {
+      return countMismatch(`button ${component.index}`, (component.parameters || []).length, 1);
+    }
   }
 
   return null;
@@ -86,6 +104,16 @@ function checkTextParams(section, text, params = [], named) {
 }
 
 /**
+ * Buttons that take a parameter on send: URL buttons with a variable, and
+ * authentication OTP buttons (the code goes in a sub_type url parameter)
+ */
+function isDynamicButton(button) {
+  const type = button.type?.toUpperCase();
+  if (type === 'URL') return /\{\{.+?\}\}/.test(button.url || '');
+  return type === 'OTP' && ['COPY_CODE', 'ONE_TAP'].includes(button.otp_type?.toUpperCase());
+}
+
+/**
  * Distinct variables of a template text ({{1}} or {{name}})
  */
 function extractVariables(text) {
@@ -94,6 +122,10 @@ function extractVariables(text) {
 
 function findComponent(template, type) {
   return template.components.find(c => c.type?.toUpperCase() === type);
+}
+
+function formatMismatch(details) {
+  return error(400, 132012, '(#132012) Parameter format does not match format in the created template', details);
 }
 
 function countMismatch(section, received, expected) {

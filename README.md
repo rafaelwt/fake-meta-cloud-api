@@ -452,9 +452,10 @@ it uses `WABA_ID`; any other path ID is treated as its own WABA):
 |------|------|------|
 | Name + language does not exist, or is not `APPROVED` | 404 | `132001` |
 | Header / body parameter count differs from the template variables | 400 | `132000` |
-| URL button parameters do not match the dynamic URL buttons | 400 | `132000` |
+| `sub_type: url` button parameters do not match the dynamic URL buttons and OTP (`COPY_CODE` / `ONE_TAP`) buttons | 400 | `132000` |
 | `NAMED` template: `parameter_name` values differ from the template variables | 400 | `132000` |
 | IMAGE / VIDEO / DOCUMENT header without a parameter of that type with `link` or `id` | 400 | `132012` |
+| LOCATION header without a `location` parameter with `latitude` and `longitude` | 400 | `132012` |
 
 Each error carries `error_data.details`, e.g. `body: number of localizable_params (0) does not match the expected number of params (1)`.
 

@@ -187,6 +187,63 @@ test('sending from PHONE_NUMBER_ID validates against the templates of WABA_ID', 
   assertError(await sendTemplate({ name: 'waba_only', language: { code: 'en_US' } }, '777'), 404, 132001);
 });
 
+async function createApproved(name, category, components) {
+  const created = await app.inject({
+    method: 'POST',
+    url: '/v26.0/777/message_templates',
+    headers: auth,
+    payload: { name, language: 'en_US', category, components }
+  });
+  assert.equal(created.statusCode, 200, created.body);
+  await wait(150);
+}
+
+test('authentication OTP copy code buttons expect the code as a url button parameter', async () => {
+  await createApproved('otp_code', 'AUTHENTICATION', [
+    { type: 'BODY', text: '{{1}} is your verification code.' },
+    { type: 'BUTTONS', buttons: [{ type: 'OTP', otp_type: 'COPY_CODE', text: 'Copy code' }] }
+  ]);
+  const base = { name: 'otp_code', language: { code: 'en_US' } };
+
+  const ok = await sendTemplate({
+    ...base,
+    components: [body('123456'), { type: 'button', sub_type: 'url', index: '0', parameters: [{ type: 'text', text: '123456' }] }]
+  });
+  assert.equal(ok.statusCode, 200, ok.body);
+
+  assertError(await sendTemplate({ ...base, components: [body('123456')] }), 400, 132000, /button/);
+});
+
+test('location headers expect a location parameter', async () => {
+  await createApproved('store_location', 'UTILITY', [
+    { type: 'HEADER', format: 'LOCATION' },
+    { type: 'BODY', text: 'Visit us' }
+  ]);
+  const base = { name: 'store_location', language: { code: 'en_US' } };
+
+  const ok = await sendTemplate({
+    ...base,
+    components: [{ type: 'header', parameters: [{ type: 'location', location: { latitude: '-34.6', longitude: '-58.4', name: 'Store', address: 'Main St' } }] }]
+  });
+  assert.equal(ok.statusCode, 200, ok.body);
+
+  assertError(await sendTemplate(base), 400, 132012, /expected LOCATION/);
+});
+
+test('error details name the actual problem', async () => {
+  assertError(await sendTemplate({
+    name: 'promo_image',
+    language: { code: 'en_US' },
+    components: [{ type: 'header', parameters: [{ type: 'image', image: {} }] }, body('Ana')]
+  }), 400, 132012, /IMAGE parameter requires a link or id/);
+
+  assertError(await sendTemplate({
+    name: 'track_order',
+    language: { code: 'en_US' },
+    components: [{ type: 'button', sub_type: 'url', index: '1', parameters: [{ type: 'text', text: 'abc' }] }]
+  }), 400, 132000, /index 1 is not a dynamic URL or OTP button/);
+});
+
 test('non-template messages are not affected', async () => {
   const res = await app.inject({
     method: 'POST',
