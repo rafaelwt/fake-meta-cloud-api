@@ -102,6 +102,10 @@ SERVICE_WINDOW_ENFORCED=false  # true: free-form messages need an inbound messag
 # Error Patterns (phone:error_code)
 ERROR_PATTERNS=+99999:131026,+88888:131047,+77777:131031
 
+# Synchronous errors on POST messages (PATTERN:CODE, xN = fail N times then accept)
+SYNC_ERROR_PATTERNS=+11111:130429,+55555:503x2
+RESPONSE_DELAY_PATTERNS=+44444:3000
+
 # Template pricing categories (template_name:category, trailing * = prefix)
 TEMPLATE_CATEGORIES=otp_*:authentication,order_update:utility
 TEMPLATE_DEFAULT_CATEGORY=marketing
@@ -627,6 +631,31 @@ curl -X POST http://localhost:3000/v26.0/123456789012345/messages \
   }'
 ```
 
+These numbers are accepted (`200`) and fail later through a `failed` status webhook.
+
+### Synchronous Errors
+
+To test retries, `SYNC_ERROR_PATTERNS` makes the `POST messages` response itself fail.
+Nothing is stored and no webhook is sent. A `xN` suffix fails the first N attempts per
+recipient, accepts the next one, then starts over.
+
+```bash
+SYNC_ERROR_PATTERNS=+11111:130429,+22222:131056,+33333:500,+66666:503,+55555:503x2
+RESPONSE_DELAY_PATTERNS=+44444:3000   # answer after 3000 ms (timeouts / slow responses)
+```
+
+| Code | HTTP | Response `error` |
+|------|------|------------------|
+| `130429` | 429 | code 130429, `(#130429) Rate limit hit` |
+| `131056` | 400 | code 131056, pair rate limit hit |
+| `131000` | 500 | code 131000, `is_transient: true` |
+| `500` | 500 | code 1, `An unknown error has occurred.`, `is_transient: true` |
+| `503` | 503 | code 2, `Service temporarily unavailable`, `is_transient: true` |
+| any other code | 400 | that code, e.g. `133016` or `131047` |
+
+With `+55555:503x2`, three sends to `+5495555500` answer `503`, `503`, `200`.
+Counters live in memory and reset when the server restarts.
+
 ## Project Structure
 
 ```
@@ -675,6 +704,7 @@ fake-meta-cloud-api/
 │   │   ├── fields.js                 # Graph `fields` parameter
 │   │   ├── idGenerator.js            # wamid generation
 │   │   ├── signature.js              # X-Hub-Signature-256
+│   │   ├── syncErrors.js             # Synchronous error / delay patterns
 │   │   └── templateCategories.js     # Template pricing categories
 │   ├── logger.js                     # Pino logger
 │   └── server.js                     # Fastify app

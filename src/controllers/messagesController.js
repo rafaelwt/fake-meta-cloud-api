@@ -2,6 +2,8 @@ const IdGenerator = require('../utils/idGenerator');
 const messageService = require('../services/messageService');
 const inboundService = require('../services/inboundService');
 const { metaError } = require('../utils/metaError');
+const { checkSyncError, getResponseDelay } = require('../utils/syncErrors');
+const config = require('../config');
 
 /**
  * Send a WhatsApp message
@@ -15,6 +17,17 @@ async function sendMessage(request, reply) {
   }
 
   request.log.info({ wabaId, type: message.type, to: message.to }, 'Received message request');
+
+  const delay = getResponseDelay(message.to, config.errors.responseDelayPatterns);
+  if (delay > 0) {
+    await new Promise(resolve => setTimeout(resolve, delay));
+  }
+
+  const syncError = checkSyncError(message.to, config.errors.syncPatterns);
+  if (syncError) {
+    request.log.info({ to: message.to, code: syncError.body.error.code, status: syncError.statusCode }, 'Simulated synchronous error');
+    return reply.status(syncError.statusCode).send(syncError.body);
+  }
 
   const messageId = IdGenerator.generateWamid();
   const response = messageService.processMessage(message, messageId, wabaId);

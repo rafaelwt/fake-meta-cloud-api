@@ -64,7 +64,11 @@ const config = {
 
   // Error simulation
   errors: {
-    patterns: process.env.ERROR_PATTERNS || '+99999:131026,+88888:131047,+77777:131031'
+    patterns: process.env.ERROR_PATTERNS || '+99999:131026,+88888:131047,+77777:131031',
+    // Fail the POST messages response itself (PATTERN:CODE, optional xN = fail N times then accept)
+    syncPatterns: process.env.SYNC_ERROR_PATTERNS || '',
+    // Answer POST messages after a delay (PATTERN:MS)
+    responseDelayPatterns: process.env.RESPONSE_DELAY_PATTERNS || ''
   },
 
   // Template pricing categories
