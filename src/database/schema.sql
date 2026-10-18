@@ -98,6 +98,7 @@ CREATE TABLE IF NOT EXISTS tenants (
     access_token TEXT NOT NULL,
     webhook_url TEXT,                       -- NULL: use WEBHOOK_URL
     app_secret TEXT,                        -- NULL: use APP_SECRET
+    settings TEXT,                          -- JSON: status_delays, read_probability overrides
     created_at INTEGER NOT NULL,            -- Unix timestamp
     updated_at INTEGER NOT NULL             -- Unix timestamp
 );

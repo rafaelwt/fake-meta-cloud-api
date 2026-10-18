@@ -545,6 +545,9 @@ curl -X POST http://localhost:3000/fake/tenants \
 - `POST /fake/tenants` answers `201` when the number is created and `200` when it is updated.
   `access_token` and `app_secret` are never returned. `display_phone_number`,
   `verified_name`, `quality_rating`, `webhook_url` and `app_secret` fall back to the `.env` values.
+- Optional per-number status flow: `status_delays` (any of `sent`, `delivered`, `read`,
+  each `{ "min": ms, "max": ms }`) and `read_probability` (0-1). Missing values use the
+  global `DELAY_*` / `READ_PROBABILITY`. Example: `"status_delays": { "sent": { "min": 100, "max": 200 } }, "read_probability": 1`.
 - `GET /fake/tenants` lists the numbers, and `DELETE /fake/tenants/:phoneNumberId` removes one
   (unknown → `404`).
 - Without `ADMIN_TOKEN` these routes answer `403`. A wrong admin token gets `401` with code `190`.
@@ -565,6 +568,23 @@ sends (with `TEMPLATE_VALIDATION_ENFORCED=true`) use the templates of the number
 
 Not isolated per tenant yet: `messages/stats` and `webhooks/events` show every number's
 data, and the 24h service window only looks at the sender's phone (not the receiving number).
+
+### Force a Message Status (fake-only)
+
+`POST /:version/:phoneNumberId/simulate/status`, with the token of that number, sends the
+status webhook right away and cancels the remaining scheduled statuses of the message:
+
+```bash
+curl -X POST http://localhost:3000/v26.0/987654321098765/simulate/status \
+  -H "Authorization: Bearer your_fake_bearer_token_here" \
+  -H "Content-Type: application/json" \
+  -d '{ "message_id": "wamid.HBgL...", "status": "read" }'
+# {"success":true}
+```
+
+- `status` is one of `sent`, `delivered`, `read` or `failed`.
+- With `failed`, `error_code` defaults to `131026`.
+- A message that was not sent by that number returns `400` with code `100`.
 
 ### Customer Service Window
 

@@ -13,8 +13,8 @@ class TenantModel {
       upsert: db.prepare(`
         INSERT INTO tenants (
           phone_number_id, waba_id, display_phone_number, verified_name, quality_rating,
-          access_token, webhook_url, app_secret, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          access_token, webhook_url, app_secret, settings, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(phone_number_id) DO UPDATE SET
           waba_id = excluded.waba_id,
           display_phone_number = excluded.display_phone_number,
@@ -23,6 +23,7 @@ class TenantModel {
           access_token = excluded.access_token,
           webhook_url = excluded.webhook_url,
           app_secret = excluded.app_secret,
+          settings = excluded.settings,
           updated_at = excluded.updated_at
       `),
 
@@ -62,6 +63,7 @@ class TenantModel {
       tenant.access_token,
       tenant.webhook_url || null,
       tenant.app_secret || null,
+      tenant.settings ? JSON.stringify(tenant.settings) : null,
       now,
       now
     );
@@ -75,7 +77,7 @@ class TenantModel {
    * @returns {object|undefined} - Tenant
    */
   findByPhone(phoneNumberId) {
-    return this.stmts.findByPhone.get(phoneNumberId);
+    return parse(this.stmts.findByPhone.get(phoneNumberId));
   }
 
   /**
@@ -84,7 +86,7 @@ class TenantModel {
    * @returns {Array} - Tenants
    */
   findByWaba(wabaId) {
-    return this.stmts.findByWaba.all(wabaId);
+    return this.stmts.findByWaba.all(wabaId).map(parse);
   }
 
   /**
@@ -92,7 +94,7 @@ class TenantModel {
    * @returns {Array} - Tenants
    */
   findAll() {
-    return this.stmts.findAll.all();
+    return this.stmts.findAll.all().map(parse);
   }
 
   /**
@@ -103,6 +105,11 @@ class TenantModel {
   delete(phoneNumberId) {
     return this.stmts.delete.run(phoneNumberId).changes > 0;
   }
+}
+
+function parse(row) {
+  if (!row) return row;
+  return { ...row, settings: row.settings ? JSON.parse(row.settings) : {} };
 }
 
 module.exports = TenantModel;

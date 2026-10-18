@@ -33,10 +33,24 @@ function initDatabase(dbPath, logger) {
 
   // Execute all schema statements
   db.exec(schema);
+  addMissingColumns(db, logger);
 
   logger.info('Database schema initialized');
 
   return db;
+}
+
+/**
+ * Add columns introduced after a table was first created (CREATE TABLE IF NOT EXISTS skips them)
+ * @param {Database} db - SQLite database instance
+ * @param {object} logger - Pino logger instance
+ */
+function addMissingColumns(db, logger) {
+  const columns = db.prepare('PRAGMA table_info(tenants)').all().map(c => c.name);
+  if (!columns.includes('settings')) {
+    db.exec('ALTER TABLE tenants ADD COLUMN settings TEXT');
+    logger.info('Added tenants.settings column');
+  }
 }
 
 /**

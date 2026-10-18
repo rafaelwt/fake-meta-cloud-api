@@ -6,6 +6,13 @@ const { metaError } = require('../utils/metaError');
  * POST /fake/tenants - register or update a phone number
  */
 async function registerTenant(request, reply) {
+  const invalidRange = Object.entries(request.body.status_delays || {}).find(([, range]) => range.min > range.max);
+  if (invalidRange) {
+    return reply.status(400).send(metaError(100, '(#100) Invalid parameter', {
+      error_data: { details: `status_delays.${invalidRange[0]}: min must be <= max` }
+    }));
+  }
+
   const { created, tenant } = tenantService.registerTenant(request.body);
 
   request.log.info({ phoneNumberId: tenant.phone_number_id, wabaId: tenant.waba_id, created }, 'Tenant registered');

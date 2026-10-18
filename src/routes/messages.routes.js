@@ -104,6 +104,31 @@ async function messagesRoutes(fastify, options) {
     config: phoneAuth,
     onRequest: auth
   }, handlers.simulateInbound);
+
+  /**
+   * POST /:version/:phoneNumberId/simulate/status
+   * Force the status of a sent message now (fake-only, cancels its pending flow)
+   */
+  fastify.post(`/${VERSION}/:wabaId/simulate/status`, {
+    schema: {
+      tags: ['Simulation'],
+      summary: 'Force the status of a sent message',
+      description: 'Sends the status webhook now and cancels the remaining scheduled statuses of that message. `error_code` (default 131026) only applies to `failed`.',
+      security,
+      params: versionedParams,
+      body: {
+        type: 'object',
+        required: ['message_id', 'status'],
+        properties: {
+          message_id: { type: 'string', minLength: 1 },
+          status: { type: 'string', enum: ['sent', 'delivered', 'read', 'failed'] },
+          error_code: { type: 'integer' }
+        }
+      }
+    },
+    config: phoneAuth,
+    onRequest: auth
+  }, handlers.simulateStatus);
 }
 
 module.exports = messagesRoutes;

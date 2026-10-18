@@ -86,6 +86,18 @@ async function simulateInbound(request, reply) {
 }
 
 /**
+ * Force the status of a sent message (fake-only)
+ */
+async function simulateStatus(request, reply) {
+  const result = messageService.forceStatus(request.params.wabaId, request.body);
+  if (result.error) return reply.status(400).send(result.error);
+
+  request.log.info({ messageId: request.body.message_id, status: request.body.status }, 'Message status forced');
+
+  return result.response;
+}
+
+/**
  * Get message statistics
  */
 async function getStats(request, reply) {
@@ -110,6 +122,7 @@ async function getWebhookEvents(request, reply) {
 module.exports = {
   sendMessage,
   simulateInbound,
+  simulateStatus,
   getStats,
   getWebhookEvents
 };
