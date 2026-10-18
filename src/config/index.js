@@ -59,7 +59,9 @@ const config = {
   behavior: {
     readProbability: parseFloat(process.env.READ_PROBABILITY || '0.7'),
     // Reject free-form messages outside the 24h customer service window (131047)
-    serviceWindowEnforced: process.env.SERVICE_WINDOW_ENFORCED === 'true'
+    serviceWindowEnforced: process.env.SERVICE_WINDOW_ENFORCED === 'true',
+    // Validate template messages against stored templates (132001 / 132000 / 132012)
+    templateValidationEnforced: process.env.TEMPLATE_VALIDATION_ENFORCED === 'true'
   },
 
   // Error simulation

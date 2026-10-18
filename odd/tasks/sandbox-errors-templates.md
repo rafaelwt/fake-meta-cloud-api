@@ -12,11 +12,13 @@ Branch: feat/sync-errors-template-validation · Delivery: work-unit commits, pus
 
 ## Tasks
 
-- [ ] T1 · S1 · inline · SYNC_ERROR_PATTERNS (+ xN fail-then-accept) and RESPONSE_DELAY_PATTERNS
-- [ ] T2 · S2 · inline · template validation on send (opt-in TEMPLATE_VALIDATION_ENFORCED)
+- [x] T1 · S1 · inline · SYNC_ERROR_PATTERNS (+ xN fail-then-accept) and RESPONSE_DELAY_PATTERNS · b520cb6
+- [x] T2 · S2 · inline · template validation on send (opt-in TEMPLATE_VALIDATION_ENFORCED) · next commit
 - [ ] T3 · S3 · inline · README, .env.example; report to bulk-whatsapp-app
 
 ## Log
 
 - L1 (2026-10-18): second request from the bulk-whatsapp-app session (blocks A-E, verbatim A-B above); "Rafael quiere que el fake sea un SANDBOX DEPLOYADO donde se pueda probar todo".
 - L2: Decisions: sync errors use a new SYNC_ERROR_PATTERNS env (ERROR_PATTERNS keeps its async webhook meaning); `xN` counters are in memory per pattern+recipient and reset after the accepted attempt, so every retry cycle repeats. Template validation is opt-in (existing clients send arbitrary template names, e.g. tests/inbound.test.js) and resolves the WABA as WABA_ID when the path id is PHONE_NUMBER_ID, otherwise the path id itself.
+- L3: T1 RED 6/7 → GREEN; suite 95/95. matchPattern extracted from matchErrorPattern (same matching, ERROR_PATTERNS unchanged).
+- L4: T2 RED 8/10 → GREEN; suite 106/106. Named-parameter mismatch answers 132000 (assumption: Meta's exact code for it is not in the request).

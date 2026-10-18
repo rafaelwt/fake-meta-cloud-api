@@ -4,6 +4,8 @@ const inboundService = require('../services/inboundService');
 const { metaError } = require('../utils/metaError');
 const { checkSyncError, getResponseDelay } = require('../utils/syncErrors');
 const config = require('../config');
+const templateService = require('../services/templateService');
+const { validateTemplateSend } = require('../services/templateValidator');
 
 /**
  * Send a WhatsApp message
@@ -29,12 +31,30 @@ async function sendMessage(request, reply) {
     return reply.status(syncError.statusCode).send(syncError.body);
   }
 
+  if (message.type === 'template' && config.behavior.templateValidationEnforced) {
+    const templateWabaId = resolveTemplateWabaId(wabaId);
+    const stored = templateService.findTemplate(templateWabaId, message.template.name, message.template.language.code);
+    const templateError = validateTemplateSend(stored, message.template);
+    if (templateError) {
+      request.log.info({ templateWabaId, template: message.template.name, code: templateError.body.error.code }, 'Template message rejected');
+      return reply.status(templateError.statusCode).send(templateError.body);
+    }
+  }
+
   const messageId = IdGenerator.generateWamid();
   const response = messageService.processMessage(message, messageId, wabaId);
 
   request.log.info({ messageId, recipient: message.to, type: message.type }, 'Message accepted');
 
   return response;
+}
+
+/**
+ * Templates live under the WABA: the configured phone number sends with WABA_ID's templates,
+ * any other path ID is treated as its own WABA
+ */
+function resolveTemplateWabaId(pathId) {
+  return pathId === config.meta.phoneNumberId ? config.meta.wabaId : pathId;
 }
 
 /**

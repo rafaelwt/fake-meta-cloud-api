@@ -124,6 +124,19 @@ function createTemplate(wabaId, body) {
 }
 
 /**
+ * Find the template a message refers to, after seeding and pending reviews
+ * @param {string} wabaId - WhatsApp Business Account ID
+ * @param {string} name - Template name
+ * @param {string} language - Language code
+ * @returns {object|undefined} - Stored template
+ */
+function findTemplate(wabaId, name, language) {
+  ensureSeeded(wabaId);
+  reviewDueTemplates();
+  return templateModel.findByName(wabaId, name, language);
+}
+
+/**
  * Approve or reject every PENDING template whose review time has passed
  * Runs from a timer and on every read, so a restart never leaves templates PENDING
  */
@@ -184,5 +197,6 @@ function decodeCursor(cursor) {
 module.exports = {
   listTemplates,
   createTemplate,
+  findTemplate,
   reviewDueTemplates
 };

@@ -108,3 +108,13 @@ test('numbers without a pattern are accepted as before', async () => {
   assert.equal(res.statusCode, 200);
   assert.equal(res.json().messages[0].message_status, 'accepted');
 });
+
+test('template validation is off by default: any template name is accepted', async () => {
+  const res = await app.inject({
+    method: 'POST',
+    url: '/v26.0/123/messages',
+    headers: auth,
+    payload: { messaging_product: 'whatsapp', to: '+5490000001', type: 'template', template: { name: 'not_created', language: { code: 'es' } } }
+  });
+  assert.equal(res.statusCode, 200);
+});

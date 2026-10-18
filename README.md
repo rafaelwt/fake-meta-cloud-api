@@ -98,6 +98,7 @@ DELAY_READ_MAX=10000
 # Behavior
 READ_PROBABILITY=0.7  # 70% chance of read status
 SERVICE_WINDOW_ENFORCED=false  # true: free-form messages need an inbound message in the last 24h
+TEMPLATE_VALIDATION_ENFORCED=false  # true: template sends are checked against stored templates
 
 # Error Patterns (phone:error_code)
 ERROR_PATTERNS=+99999:131026,+88888:131047,+77777:131031
@@ -442,7 +443,20 @@ with `rejected_reason: "INVALID_FORMAT"` when its name starts with
 A name + language that already exists in the same WABA returns HTTP 400 with
 `code: 100`, `error_subcode: 2388024`.
 
-Sending a template message does not check this list; any template name is accepted.
+By default, sending a template message does not check this list and any template name
+is accepted. With `TEMPLATE_VALIDATION_ENFORCED=true`, `POST messages` with `type: template`
+is validated against the stored templates of the WABA (when the path ID is `PHONE_NUMBER_ID`
+it uses `WABA_ID`; any other path ID is treated as its own WABA):
+
+| Case | HTTP | Code |
+|------|------|------|
+| Name + language does not exist, or is not `APPROVED` | 404 | `132001` |
+| Header / body parameter count differs from the template variables | 400 | `132000` |
+| URL button parameters do not match the dynamic URL buttons | 400 | `132000` |
+| `NAMED` template: `parameter_name` values differ from the template variables | 400 | `132000` |
+| IMAGE / VIDEO / DOCUMENT header without a parameter of that type with `link` or `id` | 400 | `132012` |
+
+Each error carries `error_data.details`, e.g. `body: number of localizable_params (0) does not match the expected number of params (1)`.
 
 #### 12. Resumable Upload (template header samples)
 
@@ -697,6 +711,7 @@ fake-meta-cloud-api/
 │   │   ├── webhookService.js         # Signed HTTP webhook delivery
 │   │   ├── phoneNumberService.js     # Phone number node
 │   │   ├── templateService.js        # Templates, seeds, review lifecycle
+│   │   ├── templateValidator.js      # Template send validation (132001/132000/132012)
 │   │   └── uploadService.js          # Resumable Upload API
 │   ├── utils/
 │   │   ├── delays.js                 # Random delay helpers
