@@ -120,10 +120,10 @@ function forceStatus(phoneNumberId, body) {
 }
 
 /**
- * Get message statistics
+ * Get message statistics of the messages sent by a phone number
  */
-function getMessageStats() {
-  const recent = messageModel.getRecent(100);
+function getMessageStats(phoneNumberId) {
+  const recent = messageModel.getRecentBySender(phoneNumberId, 100);
   return {
     total_messages: recent.length,
     by_status: recent.reduce((acc, msg) => {
@@ -138,19 +138,19 @@ function getMessageStats() {
 }
 
 /**
- * Get webhook events by message ID
+ * Get webhook events of a message sent by a phone number
  */
-function getWebhookEventsByMessage(messageId) {
+function getWebhookEventsByMessage(messageId, phoneNumberId) {
   const { webhookEventModel } = require('../database/models');
-  return webhookEventModel.getByMessageId(messageId);
+  return webhookEventModel.getByMessageIdForSender(messageId, phoneNumberId);
 }
 
 /**
- * Get recent webhook events
+ * Get recent webhook events of the messages sent by a phone number
  */
-function getRecentWebhookEvents(limit = 50) {
+function getRecentWebhookEvents(phoneNumberId, limit = 50) {
   const { webhookEventModel } = require('../database/models');
-  return webhookEventModel.getRecent(limit);
+  return webhookEventModel.getRecentForSender(phoneNumberId, limit);
 }
 
 module.exports = {

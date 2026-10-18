@@ -285,6 +285,8 @@ curl -X POST http://localhost:3000/v26.0/123456789012345/messages \
 
 #### 5. Get Message Statistics
 
+Stats and webhook events (6) only cover the messages sent by the phone number in the path.
+
 ```bash
 curl -X GET http://localhost:3000/v26.0/123456789012345/messages/stats \
   -H "Authorization: Bearer your_fake_bearer_token_here"
@@ -566,8 +568,9 @@ Status and inbound webhooks for a number go to its `webhook_url`, signed with it
 Template status webhooks go to every distinct webhook of the numbers in that WABA. Template
 sends (with `TEMPLATE_VALIDATION_ENFORCED=true`) use the templates of the number's `waba_id`.
 
-Not isolated per tenant yet: `messages/stats` and `webhooks/events` show every number's
-data, and the 24h service window only looks at the sender's phone (not the receiving number).
+`messages/stats` and `webhooks/events` only show the messages sent by the phone number in
+the path (and require its token), so tenants never see each other's data. Not isolated yet:
+the 24h service window only looks at the user's phone, not at the number they wrote to.
 
 ### Force a Message Status (fake-only)
 

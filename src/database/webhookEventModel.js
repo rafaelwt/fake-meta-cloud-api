@@ -23,6 +23,21 @@ class WebhookEventModel {
         ORDER BY sent_at ASC
       `),
 
+      findByMessageIdForSender: db.prepare(`
+        SELECT e.* FROM webhook_events e
+        JOIN messages m ON m.id = e.message_id
+        WHERE e.message_id = ? AND m.waba_id = ?
+        ORDER BY e.sent_at ASC
+      `),
+
+      findRecentForSender: db.prepare(`
+        SELECT e.* FROM webhook_events e
+        JOIN messages m ON m.id = e.message_id
+        WHERE m.waba_id = ?
+        ORDER BY e.sent_at DESC
+        LIMIT ?
+      `),
+
       findRecent: db.prepare(`
         SELECT * FROM webhook_events
         ORDER BY sent_at DESC
@@ -81,6 +96,26 @@ class WebhookEventModel {
   }
 
   /**
+   * Get webhook events of a message, only if that phone number sent it
+   * @param {string} messageId - Message ID
+   * @param {string} phoneNumberId - Phone number ID from the path
+   * @returns {Array} - Array of webhook events
+   */
+  getByMessageIdForSender(messageId, phoneNumberId) {
+    return this.stmts.findByMessageIdForSender.all(messageId, phoneNumberId).map(parseEvent);
+  }
+
+  /**
+   * Get recent webhook events of the messages sent by a phone number
+   * @param {string} phoneNumberId - Phone number ID from the path
+   * @param {number} limit - Number of events to retrieve
+   * @returns {Array} - Array of webhook events
+   */
+  getRecentForSender(phoneNumberId, limit = 100) {
+    return this.stmts.findRecentForSender.all(phoneNumberId, limit).map(parseEvent);
+  }
+
+  /**
    * Get recent webhook events
    * @param {number} limit - Number of events to retrieve
    * @returns {Array} - Array of webhook events
@@ -109,6 +144,13 @@ class WebhookEventModel {
       return evt;
     });
   }
+}
+
+function parseEvent(evt) {
+  if (evt.payload) {
+    evt.payload = JSON.parse(evt.payload);
+  }
+  return evt;
 }
 
 module.exports = WebhookEventModel;

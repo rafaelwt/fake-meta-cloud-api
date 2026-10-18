@@ -101,7 +101,7 @@ async function simulateStatus(request, reply) {
  * Get message statistics
  */
 async function getStats(request, reply) {
-  return messageService.getMessageStats();
+  return messageService.getMessageStats(request.params.wabaId);
 }
 
 /**
@@ -111,11 +111,11 @@ async function getWebhookEvents(request, reply) {
   const { messageId } = request.query;
 
   if (messageId) {
-    const events = messageService.getWebhookEventsByMessage(messageId);
+    const events = messageService.getWebhookEventsByMessage(messageId, request.params.wabaId);
     return { message_id: messageId, events };
   }
 
-  const events = messageService.getRecentWebhookEvents();
+  const events = messageService.getRecentWebhookEvents(request.params.wabaId);
   return { events };
 }
 
